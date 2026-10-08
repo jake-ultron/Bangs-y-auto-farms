@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet(
 ))()
 
 local Window = WindUI:CreateWindow({
-    Title = "TOXIC 👑 V1",
+    Title = "TOXIC V1",
     Icon = "crown",
     Author = "TOXIC 👑",
     Folder = "ToxicHub",
@@ -1228,19 +1228,6 @@ WindUI:Notify({
     Content = "TOXIC HUB LOADED! 💀",
     Duration = 5,
 })
-
---// AUTO CHAT MESSAGE
-task.spawn(function()
-    local chatMsg = "------------////bangez V1 ya lo deofusque (zoymancoyusobang-)////-----------------"
-    pcall(function()
-        if game:GetService("TextChatService").ChatVersion == Enum.ChatVersion.TextChatService then
-            game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync(chatMsg)
-        else
-            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(chatMsg, "All")
-        end
-    end)
-end)
-
 -- =====================================================================
 -- LIMPIEZA AUTOMÁTICA AL CERRAR CON LA 'X'
 -- =====================================================================
@@ -1251,7 +1238,7 @@ task.spawn(function()
 
     -- Busca el ScreenGui padre a través del título "TOXIC 👑 V1"
     for _, obj in ipairs(uiContainer:GetDescendants()) do
-        if obj:IsA("TextLabel") and obj.Text == "TOXIC 👑 V1" then
+        if obj:IsA("TextLabel") and obj.Text == "TOXIC V1" then
             mainGui = obj:FindFirstAncestorWhichIsA("ScreenGui")
             break
         end

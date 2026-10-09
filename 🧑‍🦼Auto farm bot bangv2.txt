@@ -1,0 +1,680 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+-- ==================== FUNCIONES DE FÍSICA (ACTUALIZADAS A ALIGN) ====================
+local function clearPhysics()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local root = char.HumanoidRootPart
+        if root:FindFirstChild("FarmAttachment") then root.FarmAttachment:Destroy() end
+        if root:FindFirstChild("FarmPosition") then root.FarmPosition:Destroy() end
+        if root:FindFirstChild("FarmOrientation") then root.FarmOrientation:Destroy() end
+        root.Velocity = Vector3.zero
+        root.RotVelocity = Vector3.zero
+    end
+end
+
+-- ==================== FUNCIÓN DE DESTRUCCIÓN TOTAL ====================
+local function FullDestruction()
+    -- 1. Apagar switches lógicos
+    autofarmEnabled = false
+    autoResetEnabled = false
+    bangModeEnabled = false
+    targetPlayer = nil
+
+    -- 2. Desconectar loops globales
+    if _G.HSHub_FarmLoop then 
+        _G.HSHub_FarmLoop:Disconnect() 
+        _G.HSHub_FarmLoop = nil
+    end
+    if _G.HSHub_SpawnConn then 
+        _G.HSHub_SpawnConn:Disconnect() 
+        _G.HSHub_SpawnConn = nil
+    end
+
+    -- 3. Destruir Botón Móvil
+    if _G.HSHub_MobileGui then
+        pcall(function() _G.HSHub_MobileGui:Destroy() end)
+        _G.HSHub_MobileGui = nil
+    end
+
+    -- 4. Estabilizar al jugador (limpiar Movers modernos)
+    clearPhysics()
+end
+
+-- ==================== SISTEMA ANTI-DUPLICADOS ====================
+FullDestruction() -- Limpia cualquier ejecución anterior antes de iniciar
+
+if _G.HSHub_Window and _G.HSHub_Window.Destroy then 
+    pcall(function() _G.HSHub_Window:Destroy() end) 
+end
+
+-- ==================== INICIO DE WINDUI ====================
+local W = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+
+local w = W:CreateWindow({
+    Title = "☢️ Family HS HUB",
+    Author = "by jake_Hs",
+    Folder = "HsHub",
+    Accent = Color3.fromRGB(255, 255, 0),
+    Transparent = true,
+    Theme = "Sky",
+    BackgroundImageTransparency = 0.99,
+    Size = UDim2.fromOffset(580, 460),
+    Resizable = true,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+    OpenButton = {
+        Title = "☢️ 🧑‍🦼autofarm HS",
+        CornerRadius = UDim.new(1, 0),
+        StrokeThickness = 2,
+        Enabled = true,
+        Draggable = true,
+        Scale = 0.8,
+        Color = ColorSequence.new(Color3.fromHex("#FF8C00"), Color3.fromHex("#FFFF00"))
+    }
+})
+
+_G.HSHub_Window = w
+w:SetToggleKey(Enum.KeyCode.RightShift)
+
+-- ==================== VARIABLES ====================
+autofarmEnabled = false 
+local orbitDistance = 4.0
+local orbitHeight = 2.6
+local orbitSpeed = 2.0
+bangModeEnabled = false
+
+targetPlayer = nil
+local PTg = {}
+local bE = true
+local targetSwitchInterval = 5.0
+local lastSwitchTime = 0
+local validTargetsList = {}
+local currentTargetIndex = 1
+
+local SavedCheckpoint = nil
+
+autoResetEnabled = false
+local autoResetInterval = 30 
+local lastResetTime = tick()
+
+-- ==================== PESTAÑAS ====================
+local farmTab = w:Tab({
+    Title = "Autofarm",
+    Icon = "solar:target-bold"
+})
+
+local checkpointTab = w:Tab({
+    Title = "Checkpoint y Reset",
+    Icon = "solar:map-point-bold"
+})
+
+local mobileTab = w:Tab({
+    Title = "Botón Móvil",
+    Icon = "solar:smartphone-bold"
+})
+
+-- ==================== FUNCIONES DE LÓGICA (MULTI-TARGET) ====================
+local function iTg(p) 
+    if bE then return true end 
+    
+    local n, d = p.Name:lower(), p.DisplayName:lower()
+    for _, t in ipairs(PTg) do 
+        if n:find(t, 1, true) or d:find(t, 1, true) then 
+            return true 
+        end 
+    end
+    return false 
+end
+
+local function updateValidTargets()
+    validTargetsList = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and iTg(plr) and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            table.insert(validTargetsList, plr)
+        end
+    end
+end
+
+-- ==================== FUNCIONES DE LÓGICA (NUEVO RESET) ====================
+local function forceReset()
+    if player.Character then 
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid") 
+        if humanoid then 
+            humanoid.Health = 0 
+            humanoid:ChangeState(Enum.HumanoidStateType.Dead) 
+        end 
+        player.Character:BreakJoints() 
+    end
+end
+
+local function handleAutoReset()
+    if not autoResetEnabled or autoResetInterval <= 0 then return end
+    
+    local char = player.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum and hum.Health > 0 then
+            if tick() - lastResetTime >= autoResetInterval then
+                forceReset()
+                lastResetTime = tick() 
+            end
+        end
+    end
+end
+
+-- ==================== FUNCIONES DE LÓGICA (AUTOFARM MODERNO) ====================
+local function handleAutofarm()
+    if not autofarmEnabled then return end
+
+    local myChar = player.Character
+    if not myChar then return end
+    
+    local hum = myChar:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return end 
+
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+
+    if tick() - lastSwitchTime >= targetSwitchInterval then
+        updateValidTargets()
+        if #validTargetsList > 0 then
+            currentTargetIndex = currentTargetIndex + 1
+            if currentTargetIndex > #validTargetsList then
+                currentTargetIndex = 1 
+            end
+            targetPlayer = validTargetsList[currentTargetIndex]
+            lastSwitchTime = tick()
+        else
+            targetPlayer = nil
+        end
+    end
+
+    if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        lastSwitchTime = 0
+        clearPhysics()
+        return
+    end
+
+    local targetRoot = targetPlayer.Character.HumanoidRootPart
+
+    -- Configurar AlignPosition y AlignOrientation (Físicas Modernas)
+    local att = myRoot:FindFirstChild("FarmAttachment")
+    local ap = myRoot:FindFirstChild("FarmPosition")
+    local ao = myRoot:FindFirstChild("FarmOrientation")
+
+    if not att then
+        att = Instance.new("Attachment")
+        att.Name = "FarmAttachment"
+        att.Parent = myRoot
+    end
+
+    if not ap then
+        ap = Instance.new("AlignPosition")
+        ap.Name = "FarmPosition"
+        ap.Mode = Enum.PositionAlignmentMode.OneAttachment
+        ap.Attachment0 = att
+        ap.MaxForce = 1000000 
+        ap.Responsiveness = 150 -- Reacción rápida sin temblar
+        ap.Parent = myRoot
+    end
+
+    if not ao then
+        ao = Instance.new("AlignOrientation")
+        ao.Name = "FarmOrientation"
+        ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+        ao.Attachment0 = att
+        ao.MaxTorque = 1000000
+        ao.Responsiveness = 150
+        ao.Parent = myRoot
+    end
+
+    if bangModeEnabled then
+        local goalPos = (targetRoot.CFrame * CFrame.new(0, orbitHeight, -orbitDistance)).Position
+        ap.Position = goalPos
+        ao.CFrame = CFrame.lookAt(myRoot.Position, targetRoot.Position)
+        return
+    end
+
+    local angle = tick() * orbitSpeed
+    local offset = Vector3.new(
+        math.sin(angle) * orbitDistance,
+        orbitHeight,
+        math.cos(angle) * orbitDistance
+    )
+
+    local goalPos = targetRoot.Position + offset
+    ap.Position = goalPos
+    ao.CFrame = CFrame.lookAt(myRoot.Position, targetRoot.Position)
+end
+
+local function handleSafety()
+    if not autofarmEnabled then return end
+    local char = player.Character
+    if not char then return end
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum and hum.Health > 0 then
+        hum.PlatformStand = false
+        hum.Sit = false
+    end
+
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if root and root.Position.Y < -25 then
+        root.Velocity = Vector3.new(root.Velocity.X * 0.5, 70, root.Velocity.Z * 0.5)
+    end
+end
+
+-- ==================== BUCLES Y CONEXIONES GLOBALES ====================
+_G.HSHub_FarmLoop = RunService.Heartbeat:Connect(function()
+    handleAutofarm()
+    handleSafety()
+    handleAutoReset() 
+end)
+
+_G.HSHub_SpawnConn = player.CharacterAdded:Connect(function(char)
+    lastResetTime = tick()
+
+    if autofarmEnabled then
+        task.wait(1.5)
+        W:Notify({
+            Title = "Respawneado",
+            Content = "Retomando el Autofarm...",
+            Duration = 3
+        })
+    end
+    
+    if SavedCheckpoint then
+        local root = char:WaitForChild("HumanoidRootPart", 5)
+        if root then
+            task.wait(0.2)
+            root.CFrame = CFrame.new(SavedCheckpoint)
+        end
+    end
+end)
+
+-- ==================== LÓGICA DEL BOTÓN MÓVIL ====================
+local mobileButton = nil
+local mobileButtonEnabled = true
+local mobileButtonDragEnabled = false
+
+local function createMobileButton()
+    if _G.HSHub_MobileGui then return end
+    
+    local mobileGui = Instance.new("ScreenGui")
+    mobileGui.Name = "HSHubMobileButton"
+    mobileGui.Parent = player:WaitForChild("PlayerGui")
+    mobileGui.ResetOnSpawn = false
+    mobileGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    mobileGui.DisplayOrder = 100
+    _G.HSHub_MobileGui = mobileGui
+
+    local function makeDraggable(btn)
+        local dragging = false
+        local inputStart = nil
+        local btnStart = nil
+        local moveInput = nil
+
+        btn.InputBegan:Connect(function(input)
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and mobileButtonDragEnabled then
+                dragging = true
+                inputStart = input.Position
+                btnStart = btn.Position
+
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+
+        btn.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                moveInput = input
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if input == moveInput and dragging and mobileButtonDragEnabled then
+                local delta = input.Position - inputStart
+                btn.Position = UDim2.new(
+                    btnStart.X.Scale, btnStart.X.Offset + delta.X,
+                    btnStart.Y.Scale, btnStart.Y.Offset + delta.Y
+                )
+            end
+        end)
+    end
+
+    mobileButton = Instance.new("TextButton")
+    mobileButton.Name = "BangButton"
+    mobileButton.Size = UDim2.new(0, 60, 0, 45)
+    mobileButton.Position = UDim2.fromScale(0.66, 0.65)
+    mobileButton.BackgroundColor3 = bangModeEnabled and Color3.fromRGB(37, 122, 247) or Color3.fromRGB(100, 100, 100)
+    mobileButton.BackgroundTransparency = 0.4
+    mobileButton.Text = bangModeEnabled and "BANG\nON" or "BANG\nOFF"
+    mobileButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    mobileButton.Font = Enum.Font.GothamBold
+    mobileButton.TextSize = 12
+    mobileButton.AutoButtonColor = false
+    mobileButton.Parent = _G.HSHub_MobileGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = mobileButton
+
+    mobileButton.MouseButton1Click:Connect(function()
+        bangModeEnabled = not bangModeEnabled
+        if bangModeEnabled then
+            mobileButton.Text = "BANG\nON"
+            mobileButton.BackgroundColor3 = Color3.fromRGB(37, 122, 247)
+        else
+            mobileButton.Text = "BANG\nOFF"
+            mobileButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        end
+        W:Notify({
+            Title = "Modo Bang",
+            Content = bangModeEnabled and "Activado (Fijo)" or "Desactivado (Órbita)",
+            Duration = 2
+        })
+    end)
+
+    makeDraggable(mobileButton)
+end
+
+local function destroyMobileButton()
+    if _G.HSHub_MobileGui then
+        _G.HSHub_MobileGui:Destroy()
+        _G.HSHub_MobileGui = nil
+        mobileButton = nil
+    end
+end
+
+-- ==================== INTERCEPCIÓN DE LA "X" (DESTRUCCIÓN TOTAL) ====================
+task.spawn(function()
+    task.wait(1.5)
+
+    local uiContainer = (gethui and gethui()) or game:GetService("CoreGui")
+    for _, desc in ipairs(uiContainer:GetDescendants()) do
+        if desc:IsA("TextLabel") and desc.Text == "☢️ Family HS HUB" then
+            
+            local topBar = desc.Parent
+            if topBar then
+                local buttons = {}
+                for _, child in ipairs(topBar:GetChildren()) do
+                    if child:IsA("ImageButton") or child:IsA("TextButton") then
+                        table.insert(buttons, child)
+                    end
+                end
+
+                if #buttons >= 3 then
+                    buttons[1].Visible = false
+                    buttons[2].Visible = false
+                end
+            end
+
+            local screenGui = desc:FindFirstAncestorWhichIsA("ScreenGui")
+            if screenGui then
+                screenGui.Destroying:Connect(function()
+                    FullDestruction()
+                end)
+                
+                screenGui:GetPropertyChangedSignal("Parent"):Connect(function()
+                    if screenGui.Parent == nil then
+                        FullDestruction()
+                    end
+                end)
+            end
+            break
+        end
+    end
+end)
+
+-- ==================== CONTROLES DE UI (FARM) ====================
+
+farmTab:Input({
+    Title = "Fijar Objetivo(s)",
+    Desc = "Separa nombres por espacios. Vacío = ataca a TODOS.",
+    Placeholder = "Ejemplo: nat jake pro123",
+    Callback = function(text)
+        if not text then return end
+        local r = text:lower()
+        PTg = {}
+        bE = not(r and r:gsub("%s+","") ~= "")
+        
+        if not bE then
+            for x in string.gmatch(r, "%S+") do 
+                table.insert(PTg, x) 
+            end 
+        end
+        
+        lastSwitchTime = 0 
+    end
+})
+
+farmTab:Input({
+    Title = "Tiempo entre cambios",
+    Desc = "Segundos para saltar al siguiente jugador válido",
+    Placeholder = "Predeterminado: 5",
+    Callback = function(text)
+        if not text or text == "" then return end 
+        local num = tonumber(text)
+        if num and num > 0 then 
+            targetSwitchInterval = num 
+        else
+            W:Notify({
+                Title = "Error",
+                Content = "Por favor ingresa un número mayor a 0.",
+                Duration = 3
+            })
+        end
+    end
+})
+
+farmTab:Input({
+    Title = "Distancia de la Órbita",
+    Desc = "Predeterminado: 4.0",
+    Placeholder = "Ejemplo: 4, 10, 15...",
+    Callback = function(text)
+        if not text or text == "" then return end
+        local num = tonumber(text)
+        if num then orbitDistance = num end
+    end
+})
+
+farmTab:Input({
+    Title = "Altura de la Órbita",
+    Desc = "Predeterminado: 2.6 (0 = En el piso)",
+    Placeholder = "Ejemplo: 0, 5, -2...",
+    Callback = function(text)
+        if not text or text == "" then return end
+        local num = tonumber(text)
+        if num then orbitHeight = num end
+    end
+})
+
+farmTab:Input({
+    Title = "Velocidad de la Órbita",
+    Desc = "Predeterminado: 2.0 (Mayor número = más rápido)",
+    Placeholder = "Ejemplo: 1.5, 3, 5...",
+    Callback = function(text)
+        if not text or text == "" then return end
+        local num = tonumber(text)
+        if num then 
+            orbitSpeed = num 
+        end
+    end
+})
+
+farmTab:Toggle({
+    Title = "Modo Bang (Fijo)",
+    Desc = "Deja de orbitar y permanece fijo frente al objetivo.",
+    Default = false,
+    Callback = function(state)
+        bangModeEnabled = state
+        if mobileButton then
+            if state then
+                mobileButton.Text = "BANG\nON"
+                mobileButton.BackgroundColor3 = Color3.fromRGB(37, 122, 247)
+            else
+                mobileButton.Text = "BANG\nOFF"
+                mobileButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+            end
+        end
+        if state then
+            W:Notify({
+                Title = "Modo Bang",
+                Content = "Personaje fijo frente al objetivo.",
+                Duration = 2
+            })
+        end
+    end
+})
+
+farmTab:Toggle({
+    Title = "Activar Autofarm",
+    Desc = "Rotación dinámica de targets y rotación orbital",
+    Default = false,
+    Callback = function(state)
+        autofarmEnabled = state
+        if autofarmEnabled then
+            lastSwitchTime = 0 
+            W:Notify({
+                Title = "Autofarm ON",
+                Content = "Iniciando rotación de objetivos.",
+                Duration = 3
+            })
+        else
+            targetPlayer = nil
+            clearPhysics()
+            
+            W:Notify({
+                Title = "Autofarm OFF",
+                Content = "Sistema detenido.",
+                Duration = 2
+            })
+        end
+    end
+})
+
+-- ==================== CONTROLES DE UI (CHECKPOINT Y RESET) ====================
+
+checkpointTab:Toggle({
+    Title = "Activar Auto Reset",
+    Desc = "Reinicia tu personaje automáticamente cada cierto tiempo.",
+    Default = false,
+    Callback = function(state)
+        autoResetEnabled = state
+        if state then
+            lastResetTime = tick() 
+            W:Notify({
+                Title = "Auto Reset Activado",
+                Content = "Se forzará el reinicio cada " .. autoResetInterval .. " segundos.",
+                Duration = 3
+            })
+        end
+    end
+})
+
+checkpointTab:Input({
+    Title = "Tiempo de Auto Reset",
+    Desc = "Segundos antes de morir automáticamente. (Por defecto: 30)",
+    Placeholder = "Ejemplo: 30, 60, 120...",
+    Callback = function(text)
+        if not text or text == "" then return end 
+        local num = tonumber(text)
+        if num and num > 0 then 
+            autoResetInterval = num 
+            W:Notify({
+                Title = "Tiempo Actualizado",
+                Content = "Auto Reset ajustado a " .. num .. " segundos.",
+                Duration = 3
+            })
+        else
+            W:Notify({
+                Title = "Error",
+                Content = "Ingresa un número válido de segundos.",
+                Duration = 3
+            })
+        end
+    end
+})
+
+checkpointTab:Button({
+    Title = "💀 Forzar Reset Ahora",
+    Desc = "Rompe las uniones y mata a tu personaje al instante.",
+    Callback = function()
+        forceReset()
+    end
+})
+
+checkpointTab:Button({
+    Title = "📍 Save checkpoint",
+    Desc = "Guarda tu posición para reaparecer aquí.",
+    Callback = function()
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if root then
+            SavedCheckpoint = root.Position
+            W:Notify({
+                Title = "System Broken",
+                Content = "Checkpoint saved.",
+                Duration = 5
+            })
+        end
+    end
+})
+
+checkpointTab:Button({
+    Title = "🗑️ Clear checkpoint",
+    Desc = "Elimina la posición. Reaparecerás en el spawn normal.",
+    Callback = function()
+        SavedCheckpoint = nil
+        W:Notify({
+            Title = "System Broken",
+            Content = "Checkpoint cleared.",
+            Duration = 5
+        })
+    end
+})
+
+checkpointTab:Button({
+    Title = "🔵 Activar modo auto farm_ati_afk 🔵",
+    Desc = "Inicia la secuencia definitiva de farmeo automático. Relájate y deja el dispositivo a un lado mientras el sistema hace todo el trabajo pesado sin descanso.",
+    Callback = function()
+        W:Notify({
+            Title = "Sistema AFK",
+            Content = "Iniciando Auto Farm ATI...",
+            Duration = 3
+        })
+        loadstring(game:HttpGet("https://pastebin.com/raw/wyMSZ29R"))()
+    end
+})
+ 
+-- ==================== CONTROLES DE UI (BOTÓN MÓVIL) ====================
+
+mobileTab:Toggle({
+    Title = "Mostrar Botón Móvil",
+    Desc = "Activa un botón flotante para controlar el Modo Bang.",
+    Default = false,
+    Callback = function(state)
+        mobileButtonEnabled = state
+        if state then
+            createMobileButton()
+        else
+            destroyMobileButton()
+        end
+    end
+})
+
+mobileTab:Toggle({
+    Title = "Arrastrar Botón",
+    Desc = "Permite mover el botón móvil libremente por la pantalla.",
+    Default = false,
+    Callback = function(state)
+        mobileButtonDragEnabled = state
+    end
+})

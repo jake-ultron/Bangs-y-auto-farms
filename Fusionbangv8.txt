@@ -491,7 +491,7 @@ AttackTab:Toggle({Title="VIEW TARGET", Value=false,
 AttackTab:Button({Title="OP MULTI FLING GUI 💀",
     Callback=function()
         pcall(function()
-            loadstring(game:HttpGet("https://pastefy.app/dEA5eS1L/raw"))()
+            loadstring(game:HttpGet("https://pastebin.com/raw/43xBcV1t"))()
         end)
     end})
 

@@ -512,46 +512,55 @@ AttackTab:Toggle({Title="ORBIT", Desc="Multi-Target (rota si hay varios)", Value
 AttackTab:Toggle({Title="HEADSIT", Desc="Multi-Target", Value=false,
     Callback=function(v) Toggles.Headsit = v; lastSwitchTime = 0 end})
 
-AttackTab:Toggle({Title="WALKING FLING", Value=false,
-    Callback=function(value)
+--// WALKING FLING (FIXED PHYSICS)
+AttackTab:Toggle({
+    Title = "WALKING FLING",
+    Value = false,
+    Callback = function(value)
         Toggles.WalkingFling = value
+        local lp = game.Players.LocalPlayer
+
         if value then
             WalkingFlingConnection = RunService.Heartbeat:Connect(function()
-                if not Toggles.WalkingFling then return end
-                local char = LP.Character; if not char then return end
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                if not hum or not hrp then return end
-                for _, v in pairs(char:GetDescendants()) do
-                    if v:IsA("BasePart") then v.CanCollide = false end
-                end
-                for _, pl in pairs(Players:GetPlayers()) do
-                    if pl ~= LP and pl.Character then
-                        for _, v in pairs(pl.Character:GetDescendants()) do
-                            if v:IsA("BasePart") then v.CanCollide = false end
+                pcall(function()
+                    if not Toggles.WalkingFling then return end
+
+                    for _, player in pairs(game.Players:GetPlayers()) do
+                        if player ~= lp and player.Character then
+                            for _, part in pairs(player.Character:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    part.CanCollide = false
+                                end
+                            end
                         end
                     end
-                end
-                local dir = hum.MoveDirection
-                if dir.Magnitude > 0.01 then
-                    hrp.AssemblyLinearVelocity = Vector3.new(
-                        dir.X * 250,
-                        hrp.AssemblyLinearVelocity.Y,
-                        dir.Z * 250
-                    )
-                end
+
+                    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = lp.Character.HumanoidRootPart
+                        local strength = 100000
+                        local oldV = hrp.Velocity
+                        
+                        hrp.Velocity = Vector3.new(strength, strength, strength)
+                        
+                        for _, v in pairs(lp.Character:GetDescendants()) do
+                            if v:IsA("BasePart") then 
+                                v.CanCollide = false 
+                            end
+                        end
+                        
+                        RunService.RenderStepped:Wait()
+                        hrp.Velocity = oldV
+                    end
+                end)
             end)
-            _G.Fusion_WalkingFling = WalkingFlingConnection
-            Notificar("Walking Fling", "Camina para flinggear.", 3)
         else
             if WalkingFlingConnection then
-                WalkingFlingConnection:Disconnect(); WalkingFlingConnection = nil
-                _G.Fusion_WalkingFling = nil
+                WalkingFlingConnection:Disconnect()
+                WalkingFlingConnection = nil
             end
         end
-    end})
-
--- ============================================================
+    end,
+}) ============================================================
 -- CONTROL X/Y/Z
 -- ============================================================
 ControlTab:Input({

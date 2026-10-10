@@ -1,0 +1,1276 @@
+--// TOXIC 👑 V1 - WindUI Interface
+
+local WindUI = loadstring(game:HttpGet(
+    "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
+))()
+
+local Window = WindUI:CreateWindow({
+    Title = "TOXIC 👑 V1",
+    Icon = "crown",
+    Author = "TOXIC 👑",
+    Folder = "ToxicHub",
+    Size = UDim2.fromOffset(580, 460),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 180,
+    ScrollBarEnabled = true,
+})
+
+--// GLOBAL VARIABLES & FUNCTIONS
+local TargetPlayer = nil
+local BangSpeed = 1
+local PhonkVolume = 5
+local RunService = game:GetService("RunService")
+local AntiFlingConnection = nil
+local WalkingFlingConnection = nil
+
+local Toggles = {
+    Bang = false,
+    MouthBang = false,
+    Headsit = false,
+    FrontHeadsit = false,
+    Orbit = false,
+    WalkingFling = false,
+    Noclip = false,
+    FlyWalk = false,
+    AntiVoid = false,
+    AntiBangV1 = false,
+    AntiBangV2 = false,
+    AntiFling = false,
+    AntiSit = false,
+    AntiAFK = false
+}
+
+local function GetPlayer(name)
+    if not name or name == "" then return nil end
+    name = name:lower()
+
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p.Name:lower():sub(1, #name) == name
+        or p.DisplayName:lower():sub(1, #name) == name then
+            return p
+        end
+    end
+
+    return nil
+end
+
+--// INFORMATION
+local InfoTab = Window:Tab({
+    Title = "INFORMATION 🥵",
+    Icon = "info",
+})
+
+InfoTab:Paragraph({
+    Title = "TOXIC 👑 HUB",
+    Desc = "MADE BY TOXIC 👑",
+})
+
+InfoTab:Paragraph({
+    Title = "ROBLOX ID",
+    Desc = "STR_TOXIC8",
+})
+
+InfoTab:Paragraph({
+    Title = "CREATOR",
+    Desc = "JUST_TOXIC 🥵",
+})
+
+InfoTab:Paragraph({
+    Title = "STATUS",
+    Desc = "TOXIC 👑 HUB LOADED",
+})
+
+--// TROLL
+local TrollTab = Window:Tab({
+    Title = "TROLL 💀",
+    Icon = "skull",
+})
+
+--// OP MULTI FLING GUI INTEGRATION
+TrollTab:Button({
+    Title = "OP MULTI FLING GUI 💀",
+    Desc = "Click to activate the Ultimate Multi Fling Panel!",
+    Callback = function()
+        local coreGui = (typeof(gethui) == "function" and gethui()) or game:GetService("CoreGui")
+        if coreGui:FindFirstChild("ToxicMultiFlingGUI") then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "TOXIC HUB",
+                Text = "Multi Fling GUI is already open!",
+                Duration = 3
+            })
+            return
+        end
+
+        task.spawn(function()
+            local Players = game:GetService("Players")
+            local RunService = game:GetService("RunService")
+            local UserInputService = game:GetService("UserInputService")
+            local Player = Players.LocalPlayer
+
+            local ScreenGui = Instance.new("ScreenGui")
+            ScreenGui.Name = "ToxicMultiFlingGUI"
+            ScreenGui.ResetOnSpawn = false
+            ScreenGui.Parent = coreGui
+
+            local MainFrame = Instance.new("Frame")
+            MainFrame.Size = UDim2.new(0, 320, 0, 370)
+            MainFrame.Position = UDim2.new(0.5, -160, 0.5, -185)
+            MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            MainFrame.BorderSizePixel = 0
+            MainFrame.Active = true
+            MainFrame.Draggable = true
+            MainFrame.Parent = ScreenGui
+
+            local MainCorner = Instance.new("UICorner")
+            MainCorner.CornerRadius = UDim.new(0, 8)
+            MainCorner.Parent = MainFrame
+
+            local MinFrame = Instance.new("Frame")
+            MinFrame.Size = UDim2.new(0, 240, 0, 35)
+            MinFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+            MinFrame.BorderSizePixel = 0
+            MinFrame.Active = true
+            MinFrame.Visible = false
+            MinFrame.Parent = ScreenGui
+
+            local MinFrameCorner = Instance.new("UICorner")
+            MinFrameCorner.CornerRadius = UDim.new(0, 8)
+            MinFrameCorner.Parent = MinFrame
+
+            local MinLabel = Instance.new("TextLabel")
+            MinLabel.Size = UDim2.new(1, -40, 1, 0)
+            MinLabel.Position = UDim2.new(0, 10, 0, 0)
+            MinLabel.BackgroundTransparency = 1
+            MinLabel.Text = "TOXIC MULTI FLING GUI"
+            MinLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+            MinLabel.Font = Enum.Font.GothamBold
+            MinLabel.TextSize = 12
+            MinLabel.TextXAlignment = Enum.TextXAlignment.Left
+            MinLabel.Parent = MinFrame
+
+            local OpenButton = Instance.new("TextButton")
+            OpenButton.Size = UDim2.new(0, 25, 0, 25)
+            OpenButton.Position = UDim2.new(1, -30, 0, 5)
+            OpenButton.BackgroundColor3 = Color3.fromRGB(40, 150, 40)
+            OpenButton.BorderSizePixel = 0
+            OpenButton.Text = "+"
+            OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            OpenButton.Font = Enum.Font.GothamBold
+            OpenButton.TextSize = 18
+            OpenButton.Parent = MinFrame
+
+            local OpenCorner = Instance.new("UICorner")
+            OpenCorner.CornerRadius = UDim.new(0, 6)
+            OpenCorner.Parent = OpenButton
+
+            local draggingMin, dragInputMin, dragStartMin, startPosMin
+            MinFrame.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingMin = true
+                    dragStartMin = input.Position
+                    startPosMin = MinFrame.Position
+                end
+            end)
+            MinFrame.InputChanged:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                    dragInputMin = input
+                end
+            end)
+            UserInputService.InputChanged:Connect(function(input)
+                if input == dragInputMin and draggingMin then
+                    local delta = input.Position - dragStartMin
+                    MinFrame.Position = UDim2.new(startPosMin.X.Scale, startPosMin.X.Offset + delta.X, startPosMin.Y.Scale, startPosMin.Y.Offset + delta.Y)
+                end
+            end)
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingMin = false
+                end
+            end)
+
+            local TitleBar = Instance.new("Frame")
+            TitleBar.Size = UDim2.new(1, 0, 0, 35)
+            TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+            TitleBar.BorderSizePixel = 0
+            TitleBar.Parent = MainFrame
+
+            local TitleCorner = Instance.new("UICorner")
+            TitleCorner.CornerRadius = UDim.new(0, 8)
+            TitleCorner.Parent = TitleBar
+
+            local TitleFix = Instance.new("Frame")
+            TitleFix.Size = UDim2.new(1, 0, 0, 10)
+            TitleFix.Position = UDim2.new(0, 0, 1, -10)
+            TitleFix.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+            TitleFix.BorderSizePixel = 0
+            TitleFix.Parent = TitleBar
+
+            local Title = Instance.new("TextLabel")
+            Title.Size = UDim2.new(1, -40, 1, 0)
+            Title.Position = UDim2.new(0, 10, 0, 0)
+            Title.BackgroundTransparency = 1
+            Title.Text = "TOXIC HUB MULTI FLING✨"
+            Title.TextColor3 = Color3.fromRGB(255, 50, 50)
+            Title.Font = Enum.Font.GothamBold
+            Title.TextSize = 14
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+            Title.Parent = TitleBar
+
+            local MinimizeButton = Instance.new("TextButton")
+            MinimizeButton.Position = UDim2.new(1, -35, 0, 5)
+            MinimizeButton.Size = UDim2.new(0, 25, 0, 25)
+            MinimizeButton.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+            MinimizeButton.BorderSizePixel = 0
+            MinimizeButton.Text = "-"
+            MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            MinimizeButton.Font = Enum.Font.GothamBold
+            MinimizeButton.TextSize = 18
+            MinimizeButton.Parent = TitleBar
+
+            local MinimizeCorner = Instance.new("UICorner")
+            MinimizeCorner.CornerRadius = UDim.new(0, 6)
+            MinimizeCorner.Parent = MinimizeButton
+
+            local AuthorLabel = Instance.new("TextLabel")
+            AuthorLabel.Position = UDim2.new(0, 10, 0, 40)
+            AuthorLabel.Size = UDim2.new(1, -20, 0, 15)
+            AuthorLabel.BackgroundTransparency = 1
+            AuthorLabel.Text = "Made by @STR_TOXIC8"
+            AuthorLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+            AuthorLabel.Font = Enum.Font.Gotham
+            AuthorLabel.TextSize = 12
+            AuthorLabel.TextXAlignment = Enum.TextXAlignment.Left
+            AuthorLabel.Parent = MainFrame
+
+            local StatusLabel = Instance.new("TextLabel")
+            StatusLabel.Position = UDim2.new(0, 10, 0, 55)
+            StatusLabel.Size = UDim2.new(1, -20, 0, 20)
+            StatusLabel.BackgroundTransparency = 1
+            StatusLabel.Text = "Select targets to fling"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            StatusLabel.Font = Enum.Font.GothamSemibold
+            StatusLabel.TextSize = 14
+            StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+            StatusLabel.Parent = MainFrame
+
+            local SelectionFrame = Instance.new("Frame")
+            SelectionFrame.Position = UDim2.new(0, 10, 0, 80)
+            SelectionFrame.Size = UDim2.new(1, -20, 0, 210)
+            SelectionFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            SelectionFrame.BorderSizePixel = 0
+            SelectionFrame.Parent = MainFrame
+
+            local SelectionCorner = Instance.new("UICorner")
+            SelectionCorner.CornerRadius = UDim.new(0, 6)
+            SelectionCorner.Parent = SelectionFrame
+
+            local PlayerScrollFrame = Instance.new("ScrollingFrame")
+            PlayerScrollFrame.Position = UDim2.new(0, 5, 0, 5)
+            PlayerScrollFrame.Size = UDim2.new(1, -10, 1, -10)
+            PlayerScrollFrame.BackgroundTransparency = 1
+            PlayerScrollFrame.BorderSizePixel = 0
+            PlayerScrollFrame.ScrollBarThickness = 4
+            PlayerScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 50, 50)
+            PlayerScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+            PlayerScrollFrame.Parent = SelectionFrame
+
+            local StartButton = Instance.new("TextButton")
+            StartButton.Position = UDim2.new(0, 10, 0, 300)
+            StartButton.Size = UDim2.new(0.5, -15, 0, 30)
+            StartButton.BackgroundColor3 = Color3.fromRGB(40, 150, 40)
+            StartButton.BorderSizePixel = 0
+            StartButton.Text = "START FLING"
+            StartButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            StartButton.Font = Enum.Font.GothamBold
+            StartButton.TextSize = 13
+            StartButton.Parent = MainFrame
+
+            local StartCorner = Instance.new("UICorner")
+            StartCorner.CornerRadius = UDim.new(0, 6)
+            StartCorner.Parent = StartButton
+
+            local StopButton = Instance.new("TextButton")
+            StopButton.Position = UDim2.new(0.5, 5, 0, 300)
+            StopButton.Size = UDim2.new(0.5, -15, 0, 30)
+            StopButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+            StopButton.BorderSizePixel = 0
+            StopButton.Text = "STOP FLING"
+            StopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            StopButton.Font = Enum.Font.GothamBold
+            StopButton.TextSize = 13
+            StopButton.Parent = MainFrame
+
+            local StopCorner = Instance.new("UICorner")
+            StopCorner.CornerRadius = UDim.new(0, 6)
+            StopCorner.Parent = StopButton
+
+            local SelectAllButton = Instance.new("TextButton")
+            SelectAllButton.Position = UDim2.new(0, 10, 0, 335)
+            SelectAllButton.Size = UDim2.new(0.5, -15, 0, 25)
+            SelectAllButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            SelectAllButton.BorderSizePixel = 0
+            SelectAllButton.Text = "SELECT ALL"
+            SelectAllButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            SelectAllButton.Font = Enum.Font.Gotham
+            SelectAllButton.TextSize = 12
+            SelectAllButton.Parent = MainFrame
+
+            local SelectCorner = Instance.new("UICorner")
+            SelectCorner.CornerRadius = UDim.new(0, 6)
+            SelectCorner.Parent = SelectAllButton
+
+            local DeselectAllButton = Instance.new("TextButton")
+            DeselectAllButton.Position = UDim2.new(0.5, 5, 0, 335)
+            DeselectAllButton.Size = UDim2.new(0.5, -15, 0, 25)
+            DeselectAllButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            DeselectAllButton.BorderSizePixel = 0
+            DeselectAllButton.Text = "DESELECT ALL"
+            DeselectAllButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            DeselectAllButton.Font = Enum.Font.Gotham
+            DeselectAllButton.TextSize = 12
+            DeselectAllButton.Parent = MainFrame
+
+            local DeselectCorner = Instance.new("UICorner")
+            DeselectCorner.CornerRadius = UDim.new(0, 6)
+            DeselectCorner.Parent = DeselectAllButton
+
+            local SelectedTargets = {}
+            local PlayerCheckboxes = {}
+            local FlingActive = false
+            getgenv().OldPos = nil
+            getgenv().FPDH = workspace.FallenPartsDestroyHeight
+
+            local function RefreshPlayerList()
+                for _, child in pairs(PlayerScrollFrame:GetChildren()) do
+                    child:Destroy()
+                end
+                PlayerCheckboxes = {}
+                local PlayerList = Players:GetPlayers()
+                table.sort(PlayerList, function(a, b) return a.Name:lower() < b.Name:lower() end)
+                local yPosition = 0
+                for _, p in ipairs(PlayerList) do
+                    if p ~= Player then 
+                        local PlayerEntry = Instance.new("Frame")
+                        PlayerEntry.Size = UDim2.new(1, -5, 0, 30)
+                        PlayerEntry.Position = UDim2.new(0, 0, 0, yPosition)
+                        PlayerEntry.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+                        PlayerEntry.BorderSizePixel = 0
+                        PlayerEntry.Parent = PlayerScrollFrame
+                        
+                        local EntryCorner = Instance.new("UICorner")
+                        EntryCorner.CornerRadius = UDim.new(0, 4)
+                        EntryCorner.Parent = PlayerEntry
+                        
+                        local Checkbox = Instance.new("Frame")
+                        Checkbox.Size = UDim2.new(0, 18, 0, 18)
+                        Checkbox.Position = UDim2.new(0, 6, 0.5, -9)
+                        Checkbox.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+                        Checkbox.BorderSizePixel = 0
+                        Checkbox.Parent = PlayerEntry
+                        
+                        local CB_Corner = Instance.new("UICorner")
+                        CB_Corner.CornerRadius = UDim.new(0, 4)
+                        CB_Corner.Parent = Checkbox
+                        
+                        local Checkmark = Instance.new("TextLabel")
+                        Checkmark.Size = UDim2.new(1, 0, 1, 0)
+                        Checkmark.BackgroundTransparency = 1
+                        Checkmark.Text = "✓"
+                        Checkmark.TextColor3 = Color3.fromRGB(50, 255, 50)
+                        Checkmark.TextSize = 14
+                        Checkmark.Font = Enum.Font.GothamBold
+                        Checkmark.Visible = SelectedTargets[p.Name] ~= nil
+                        Checkmark.Parent = Checkbox
+                        
+                        local NameLabel = Instance.new("TextLabel")
+                        NameLabel.Size = UDim2.new(1, -35, 1, 0)
+                        NameLabel.Position = UDim2.new(0, 32, 0, 0)
+                        NameLabel.BackgroundTransparency = 1
+                        NameLabel.Text = p.DisplayName .. " (@" .. p.Name .. ")"
+                        NameLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+                        NameLabel.TextSize = 13
+                        NameLabel.Font = Enum.Font.Gotham
+                        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+                        NameLabel.Parent = PlayerEntry
+                        
+                        local ClickArea = Instance.new("TextButton")
+                        ClickArea.Size = UDim2.new(1, 0, 1, 0)
+                        ClickArea.BackgroundTransparency = 1
+                        ClickArea.Text = ""
+                        ClickArea.ZIndex = 2
+                        ClickArea.Parent = PlayerEntry
+                        
+                        ClickArea.MouseButton1Click:Connect(function()
+                            if SelectedTargets[p.Name] then
+                                SelectedTargets[p.Name] = nil
+                                Checkmark.Visible = false
+                            else
+                                SelectedTargets[p.Name] = p
+                                Checkmark.Visible = true
+                            end
+                            UpdateStatus()
+                        end)
+                        PlayerCheckboxes[p.Name] = { Entry = PlayerEntry, Checkmark = Checkmark }
+                        yPosition = yPosition + 35
+                    end
+                end
+                PlayerScrollFrame.CanvasSize = UDim2.new(0, 0, 0, yPosition)
+            end
+
+            function CountSelectedTargets()
+                local count = 0
+                for _ in pairs(SelectedTargets) do count = count + 1 end
+                return count
+            end
+
+            function UpdateStatus()
+                local count = CountSelectedTargets()
+                if FlingActive then
+                    StatusLabel.Text = "Flinging " .. count .. " target(s) 💀"
+                    StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+                else
+                    StatusLabel.Text = count .. " target(s) selected" 
+                    StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                end
+            end
+
+            local function ToggleAllPlayers(select)
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= Player then
+                        local checkboxData = PlayerCheckboxes[p.Name]
+                        if checkboxData then
+                            if select then
+                                SelectedTargets[p.Name] = p
+                                checkboxData.Checkmark.Visible = true
+                            else
+                                SelectedTargets[p.Name] = nil
+                                checkboxData.Checkmark.Visible = false
+                            end
+                        end
+                    end
+                end
+                UpdateStatus()
+            end
+
+            local function Message(Title, Text, Time)
+                game:GetService("StarterGui"):SetCore("SendNotification", { Title = Title, Text = Text, Duration = Time or 5 })
+            end
+
+            local function ToxicFling(TargetPlayer)
+                local Character = Player.Character
+                local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+                local RootPart = Humanoid and Humanoid.RootPart
+                local TCharacter = TargetPlayer.Character
+                if not TCharacter then return end
+                
+                local THumanoid
+                local TRootPart
+                local THead
+                local Accessory
+                local Handle
+                
+                                if TCharacter:FindFirstChildOfClass("Humanoid") then THumanoid = TCharacter:FindFirstChildOfClass("Humanoid") end
+                if THumanoid and THumanoid.RootPart then TRootPart = THumanoid.RootPart end
+                if TCharacter:FindFirstChild("Head") then THead = TCharacter.Head end
+                if TCharacter:FindFirstChildOfClass("Accessory") then Accessory = TCharacter:FindFirstChildOfClass("Accessory") end
+                if Accessory and Accessory:FindFirstChild("Handle") then Handle = Accessory.Handle end
+                
+                if Character and Humanoid and RootPart then
+                    if RootPart.Velocity.Magnitude < 50 then getgenv().OldPos = RootPart.CFrame end
+                    if THumanoid and THumanoid.Sit then return Message("TOXIC HUB", TargetPlayer.Name .. " is sitting!", 2) end
+                    
+                    if THead then workspace.CurrentCamera.CameraSubject = THead
+                    elseif Handle then workspace.CurrentCamera.CameraSubject = Handle
+                    elseif THumanoid and TRootPart then workspace.CurrentCamera.CameraSubject = THumanoid end
+                    
+                    if not TCharacter:FindFirstChildWhichIsA("BasePart") then return end
+                    
+                    local FPos = function(BasePart, Pos, Ang)
+                        RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
+                        Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
+                        RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+                        RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
+                    end
+                    
+                    local SFBasePart = function(BasePart)
+                        local TimeToWait = 2
+                        local Time = tick()
+                        local Angle = 0
+                        repeat
+                            if RootPart and THumanoid then
+                                if BasePart.Velocity.Magnitude < 50 then
+                                    Angle = Angle + 100
+                                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0 ,0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0 ,0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection, CFrame.Angles(math.rad(Angle),0 ,0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection, CFrame.Angles(math.rad(Angle), 0, 0))
+                                    task.wait()
+                                else
+                                    FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, -1.5, -THumanoid.WalkSpeed), CFrame.Angles(0, 0, 0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
+                                    task.wait()
+                                    FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
+                                    task.wait()
+                                end
+                            end
+                        until Time + TimeToWait < tick() or not FlingActive
+                    end
+                    
+                    workspace.FallenPartsDestroyHeight = 0/0
+                    local BV = Instance.new("BodyVelocity")
+                    BV.Parent = RootPart
+                    BV.Velocity = Vector3.new(0, 0, 0)
+                    BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                    Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+                    
+                    if TRootPart then SFBasePart(TRootPart)
+                    elseif THead then SFBasePart(THead)
+                    elseif Handle then SFBasePart(Handle)
+                    else return Message("TOXIC HUB", TargetPlayer.Name .. " has no valid parts", 2) end
+                    
+                    BV:Destroy()
+                    Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+                    workspace.CurrentCamera.CameraSubject = Humanoid
+                    
+                    if getgenv().OldPos then
+                        repeat
+                            RootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
+                            Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
+                            Humanoid:ChangeState("GettingUp")
+                            for _, part in pairs(Character:GetChildren()) do
+                                if part:IsA("BasePart") then part.Velocity, part.RotVelocity = Vector3.new(), Vector3.new() end
+                            end
+                            task.wait()
+                        until (RootPart.Position - getgenv().OldPos.p).Magnitude < 25
+                        workspace.FallenPartsDestroyHeight = getgenv().FPDH
+                    end
+                else return Message("TOXIC HUB", "Your character is not ready", 2) end
+            end
+
+            local function StartFling()
+                if FlingActive then return end
+                local count = CountSelectedTargets()
+                if count == 0 then
+                    StatusLabel.Text = "No targets selected!"
+                    wait(1)
+                    StatusLabel.Text = "Select targets to fling"
+                    return
+                end
+                FlingActive = true
+                UpdateStatus()
+                Message("TOXIC HUB", "Flinging " .. count .. " targets 💀", 2)
+                
+                spawn(function()
+                    while FlingActive do
+                        local validTargets = {}
+                        for name, p in pairs(SelectedTargets) do
+                            if p and p.Parent then validTargets[name] = p
+                            else
+                                SelectedTargets[name] = nil
+                                local checkbox = PlayerCheckboxes[name]
+                                if checkbox then checkbox.Checkmark.Visible = false end
+                            end
+                        end
+                        for _, p in pairs(validTargets) do
+                            if FlingActive then ToxicFling(p); wait(0.1) else break end
+                        end
+                        UpdateStatus()
+                        wait(0.5)
+                    end
+                end)
+            end
+
+            local function StopFling()
+                if not FlingActive then return end
+                FlingActive = false
+                UpdateStatus()
+                Message("TOXIC HUB", "Multi-Fling Stopped.", 2)
+            end
+
+            StartButton.MouseButton1Click:Connect(StartFling)
+            StopButton.MouseButton1Click:Connect(StopFling)
+            SelectAllButton.MouseButton1Click:Connect(function() ToggleAllPlayers(true) end)
+            DeselectAllButton.MouseButton1Click:Connect(function() ToggleAllPlayers(false) end)
+
+            MinimizeButton.MouseButton1Click:Connect(function()
+                MainFrame.Visible = false
+                MinFrame.Position = UDim2.new(0, MainFrame.AbsolutePosition.X, 0, MainFrame.AbsolutePosition.Y)
+                MinFrame.Visible = true
+            end)
+
+            OpenButton.MouseButton1Click:Connect(function()
+                MinFrame.Visible = false
+                MainFrame.Position = UDim2.new(0, MinFrame.AbsolutePosition.X, 0, MinFrame.AbsolutePosition.Y)
+                MainFrame.Visible = true
+            end)
+
+            Players.PlayerAdded:Connect(RefreshPlayerList)
+            Players.PlayerRemoving:Connect(function(p)
+                if SelectedTargets[p.Name] then SelectedTargets[p.Name] = nil end
+                RefreshPlayerList()
+                UpdateStatus()
+            end)
+
+            RefreshPlayerList()
+            UpdateStatus()
+            Message("TOXIC HUB 👑", "TOXIC MULTI-FLING GUI LOADED! 💀", 4)
+        end)
+    end,
+})
+
+TrollTab:Input({
+    Title = "TARGET NAME",
+    Desc = "Enter player name",
+    Placeholder = "Username...",
+    Callback = function(value)
+        TargetPlayer = GetPlayer(value)
+        print("Target:", TargetPlayer and TargetPlayer.Name or "Not found")
+    end,
+})
+
+TrollTab:Input({
+    Title = "SPEED",
+    Desc = "Default: 1",
+    Placeholder = "1",
+    Callback = function(value)
+        BangSpeed = tonumber(value) or 1
+    end,
+})
+
+TrollTab:Button({
+    Title = "GOTO TARGET",
+    Desc = "Target action",
+    Callback = function()
+        if TargetPlayer and TargetPlayer.Character then
+            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame =
+                TargetPlayer.Character.HumanoidRootPart.CFrame
+        end
+    end,
+})
+
+TrollTab:Toggle({
+    Title = "VIEW TARGET",
+    Desc = "Toggle target view",
+    Value = false,
+    Callback = function(value)
+        if value and TargetPlayer and TargetPlayer.Character then
+            workspace.CurrentCamera.CameraSubject =
+                TargetPlayer.Character.Humanoid
+        else
+            workspace.CurrentCamera.CameraSubject =
+                game.Players.LocalPlayer.Character.Humanoid
+        end
+    end,
+})
+
+TrollTab:Toggle({
+    Title = "BANG",
+    Desc = "Toggle",
+    Value = false,
+    Callback = function(value)
+        Toggles.Bang = value
+
+        task.spawn(function()
+            while Toggles.Bang and task.wait() do
+                pcall(function()
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame =
+                        TargetPlayer.Character.HumanoidRootPart.CFrame *
+                        CFrame.new(
+                            0,
+                            0,
+                            1.1 + math.sin(tick() * (BangSpeed * 20)) * 0.8
+                        )
+                end)
+            end
+        end)
+    end,
+})
+
+TrollTab:Toggle({
+    Title = "MOUTH BANG",
+    Value = false,
+    Callback = function(value)
+        Toggles.MouthBang = value
+
+        task.spawn(function()
+            while Toggles.MouthBang and task.wait() do
+                pcall(function()
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame =
+                        TargetPlayer.Character.Head.CFrame *
+                        CFrame.new(
+                            0,
+                            0.2,
+                            -1.2 - math.sin(tick() * (BangSpeed * 20)) * 0.8
+                        ) *
+                        CFrame.Angles(0, math.pi, 0)
+                end)
+            end
+        end)
+    end,
+})
+
+TrollTab:Toggle({
+    Title = "HEADSIT",
+    Value = false,
+    Callback = function(value)
+        Toggles.Headsit = value
+
+        task.spawn(function()
+            while Toggles.Headsit and task.wait() do
+                pcall(function()
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame =
+                        TargetPlayer.Character.Head.CFrame *
+                        CFrame.new(
+                            0,
+                            0.5 + math.sin(tick() * (BangSpeed * 20)) * 0.5,
+                            0
+                        )
+                end)
+            end
+        end)
+    end,
+})
+
+TrollTab:Toggle({
+    Title = "FRONTHEADSIT",
+    Value = false,
+    Callback = function(value)
+        Toggles.FrontHeadsit = value
+
+        task.spawn(function()
+            while Toggles.FrontHeadsit and task.wait() do
+                pcall(function()
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame =
+                        TargetPlayer.Character.Head.CFrame *
+                        CFrame.new(
+                            0,
+                            0.4,
+                            -0.2 - math.sin(tick() * (BangSpeed * 25)) * 0.5
+                        ) *
+                        CFrame.Angles(0, math.pi, 0)
+                end)
+            end
+        end)
+    end,
+})
+
+TrollTab:Toggle({
+    Title = "ORBIT",
+    Value = false,
+    Callback = function(value)
+        Toggles.Orbit = value
+
+        task.spawn(function()
+            local angle = 0
+
+            while Toggles.Orbit and task.wait() do
+                pcall(function()
+                    angle = angle + (0.2 * BangSpeed)
+
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame =
+                        TargetPlayer.Character.HumanoidRootPart.CFrame *
+                        CFrame.Angles(0, angle, 0) *
+                        CFrame.new(0, 0, 5)
+                end)
+            end
+        end)
+    end,
+})
+
+--// WALKING FLING (FIXED PHYSICS)
+TrollTab:Toggle({
+    Title = "WALKING FLING",
+    Value = false,
+    Callback = function(value)
+        Toggles.WalkingFling = value
+        local lp = game.Players.LocalPlayer
+
+        if value then
+            WalkingFlingConnection = RunService.Heartbeat:Connect(function()
+                pcall(function()
+                    if not Toggles.WalkingFling then return end
+
+                    for _, player in pairs(game.Players:GetPlayers()) do
+                        if player ~= lp and player.Character then
+                            for _, part in pairs(player.Character:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    part.CanCollide = false
+                                end
+                            end
+                        end
+                    end
+
+                    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = lp.Character.HumanoidRootPart
+                        local strength = 100000
+                        local oldV = hrp.Velocity
+                        
+                        hrp.Velocity = Vector3.new(strength, strength, strength)
+                        
+                        for _, v in pairs(lp.Character:GetDescendants()) do
+                            if v:IsA("BasePart") then 
+                                v.CanCollide = false 
+                            end
+                        end
+                        
+                        RunService.RenderStepped:Wait()
+                        hrp.Velocity = oldV
+                    end
+                end)
+            end)
+        else
+            if WalkingFlingConnection then
+                WalkingFlingConnection:Disconnect()
+                WalkingFlingConnection = nil
+            end
+        end
+    end,
+})
+
+--// DEFENCE
+local DefenceTab = Window:Tab({
+    Title = "DEFENCE ⚔️",
+    Icon = "shield",
+})
+
+--// SAFE SPOT
+local SafeSpotGui = nil
+local SafeSpotBaseplate = nil
+local teleported = false
+local originalPosition = nil
+
+DefenceTab:Toggle({
+    Title = "Safe Spot",
+    Value = false,
+    Callback = function(value)
+        local player = game:GetService("Players").LocalPlayer
+        local UserInputService = game:GetService("UserInputService")
+        
+        if value then
+            local teleportPosition = Vector3.new(5000, 1000, 5000)
+            local baseplateSize = Vector3.new(100, 1, 100)
+            local baseplatePosition = teleportPosition - Vector3.new(0, 5, 0)
+
+            SafeSpotBaseplate = Instance.new("Part")
+            SafeSpotBaseplate.Size = baseplateSize
+            SafeSpotBaseplate.Position = baseplatePosition
+            SafeSpotBaseplate.Anchored = true
+            SafeSpotBaseplate.BrickColor = BrickColor.new("Earth green")
+            SafeSpotBaseplate.Parent = workspace
+
+            local playerGui = player:WaitForChild("PlayerGui")
+            SafeSpotGui = Instance.new("ScreenGui")
+            SafeSpotGui.Name = "TeleportGui"
+            SafeSpotGui.ResetOnSpawn = false
+            SafeSpotGui.Parent = playerGui
+
+            local teleportButton = Instance.new("TextButton")
+            teleportButton.Size = UDim2.new(0, 50, 0, 50)
+            teleportButton.Position = UDim2.new(0, 150, 0, 10)
+            teleportButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+            teleportButton.Text = "TP"
+            teleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            teleportButton.Font = Enum.Font.GothamBold
+            teleportButton.TextSize = 20
+            teleportButton.Parent = SafeSpotGui
+            
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = teleportButton
+
+            local dragging, dragInput, dragStart, startPos
+
+            teleportButton.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = true
+                    dragStart = input.Position
+                    startPos = teleportButton.Position
+                    
+                    input.Changed:Connect(function()
+                        if input.UserInputState == Enum.UserInputState.End then
+                            dragging = false
+                        end
+                    end)
+                end
+            end)
+
+            teleportButton.InputChanged:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                    dragInput = input
+                end
+            end)
+
+            UserInputService.InputChanged:Connect(function(input)
+                if input == dragInput and dragging then
+                    local delta = input.Position - dragStart
+                    teleportButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                end
+            end)
+
+            teleportButton.MouseButton1Click:Connect(function()
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local humanoidRootPart = player.Character.HumanoidRootPart
+
+                    if not teleported then
+                        originalPosition = humanoidRootPart.Position
+                        humanoidRootPart.CFrame = CFrame.new(teleportPosition)
+                        teleported = true
+                        teleportButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                        teleportButton.Text = "BACK"
+                    else
+                        if originalPosition then
+                            humanoidRootPart.CFrame = CFrame.new(originalPosition)
+                        end
+                        teleported = false
+                        teleportButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+                        teleportButton.Text = "TP"
+                    end
+                end
+            end)
+
+        else
+            if SafeSpotGui then
+                SafeSpotGui:Destroy()
+                SafeSpotGui = nil
+            end
+            if SafeSpotBaseplate then
+                SafeSpotBaseplate:Destroy()
+                SafeSpotBaseplate = nil
+            end
+            
+            if teleported and player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                if originalPosition then
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(originalPosition)
+                end
+                teleported = false
+            end
+        end
+    end,
+})
+
+DefenceTab:Toggle({
+    Title = "Anti Void",
+    Value = false,
+    Callback = function(value)
+        Toggles.AntiVoid = value
+
+        task.spawn(function()
+            while Toggles.AntiVoid and task.wait() do
+                pcall(function()
+                    local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
+
+                    if hrp.Position.Y < -15 then
+                        hrp.Velocity = Vector3.new(0, 0, 0)
+                        hrp.CFrame = CFrame.new(hrp.Position.X, 50, hrp.Position.Z)
+                    end
+                end)
+            end
+        end)
+    end,
+})
+
+--// ANTI BANG V1 (UPDATED PUSH POWER)
+DefenceTab:Toggle({
+    Title = "Anti Bang V1",
+    Value = false,
+    Callback = function(value)
+        Toggles.AntiBangV1 = value
+
+        task.spawn(function()
+            while Toggles.AntiBangV1 do
+                task.wait(0.1)
+                pcall(function()
+                    local player = game.Players.LocalPlayer
+                    local char = player.Character
+                    
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+                            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                                local myPos = char.HumanoidRootPart.Position
+                                local otherPos = otherPlayer.Character.HumanoidRootPart.Position
+                                local dist = (myPos - otherPos).Magnitude
+                                
+                                if dist < 3.5 then
+                                    local moveDirection = (myPos - otherPos).Unit
+                                    -- Push strength increased from 5 to 20 for massive push!
+                                    char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + Vector3.new(moveDirection.X * 20, 0, moveDirection.Z * 20)
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end,
+})
+
+--// ANTI BANG V2 
+DefenceTab:Toggle({
+    Title = "Anti Bang V2 (TP)",
+    Value = false,
+    Callback = function(value)
+        Toggles.AntiBangV2 = value
+
+        task.spawn(function()
+            while Toggles.AntiBangV2 do
+                pcall(function()
+                    local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
+                    local groundCFrame = hrp.CFrame 
+                    
+                    hrp.CFrame = groundCFrame * CFrame.new(0, 1000, 0)
+                    task.wait(0.1)
+                    
+                    if not Toggles.AntiBangV2 then return end
+                    hrp.CFrame = groundCFrame
+                    task.wait(0.1)
+                    
+                    if not Toggles.AntiBangV2 then return end
+                    hrp.CFrame = groundCFrame * CFrame.new(0, -1000, 0)
+                    task.wait(0.1)
+                    
+                    if not Toggles.AntiBangV2 then return end
+                    hrp.CFrame = groundCFrame
+                    task.wait(0.1)
+                end)
+            end
+        end)
+    end,
+})
+
+--// ANTI FLING
+DefenceTab:Toggle({
+    Title = "Anti Fling",
+    Value = false,
+    Callback = function(value)
+        Toggles.AntiFling = value
+        
+        if value then
+            AntiFlingConnection = RunService.Stepped:Connect(function()
+                pcall(function()
+                    local lp = game.Players.LocalPlayer
+                    for _, player in pairs(game.Players:GetPlayers()) do
+                        if player ~= lp and player.Character then
+                            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                            if hrp and not hrp.Anchored then
+                                hrp.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+                                hrp.CanCollide = false
+                                
+                                if hrp.Velocity.Magnitude > 100 or hrp.RotVelocity.Magnitude > 100 then
+                                    hrp.Velocity = Vector3.new(0, 0, 0)
+                                    hrp.RotVelocity = Vector3.new(0, 0, 0)
+                                end
+                            end
+                        end
+                    end
+                end)
+            end)
+        else
+            if AntiFlingConnection then
+                AntiFlingConnection:Disconnect()
+                AntiFlingConnection = nil
+            end
+        end
+    end,
+})
+
+--// NEW ANTI SIT (Auto Jump Method)
+DefenceTab:Toggle({
+    Title = "Anti Sit",
+    Value = false,
+    Callback = function(value)
+        Toggles.AntiSit = value
+
+        task.spawn(function()
+            while Toggles.AntiSit and task.wait() do
+                pcall(function()
+                    local hum = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+                    if hum and hum.Sit then
+                        hum.Jump = true
+                    end
+                end)
+            end
+        end)
+    end,
+})
+
+--// SPAM
+local SpamTab = Window:Tab({
+    Title = "SPAM 🥵",
+    Icon = "message-square",
+})
+
+SpamTab:Button({
+    Title = "CHOCO EDITION SPAM 👑",
+    Desc = "Click to execute the ultimate VIP Spammer!",
+    Callback = function()
+        loadstring(game:HttpGet(("https://gist.githubusercontent.com/TOXIC-8535/3fb7f2ed806ebe14d31ec8fa87abdf6a/raw/2e5c81dda577d72b2b2b9e00b43477b784a742e0/Choco%2520edition%2520spammer"),true))()
+    end,
+})
+
+--// LIFE TOGETHER RP
+local LifeTogetherTab = Window:Tab({
+    Title = "LIFE TOGETHER RP ☄️",
+    Icon = "shirt",
+})
+
+LifeTogetherTab:Button({
+    Title = "TOXIC OUTFIT COPIER 🤩 (ONLY FOR LIFE TOGETHER ☄️)GUI✌🏻",
+    Desc = "Click to open the outfit copier GUI",
+    Callback = function()
+        loadstring(game:HttpGet(("https://gist.githubusercontent.com/TOXIC-8535/a54a89d6570b62f9cb513f32a3757d70/raw/65b73b625c39b3d7f2bb390bc21b8f66fd344ae7/gistfile1.txt"),true))()
+    end,
+})
+
+LifeTogetherTab:Button({
+    Title = "TOXIC 🦁 ULTIMATE TRAPPING 🌪️",
+    Desc = "Click to open the Ultimate Pyramid Trap GUI",
+    Callback = function()
+        loadstring(game:HttpGet(("https://gist.githubusercontent.com/TOXIC-8535/705f10e81586f4cd1309b821f7d84935/raw/3a93015ff2153dacc1b690aa846d41bde6c1d263/gistfile1.txt"),true))()
+    end,
+})
+
+--// OTHER
+local OtherTab = Window:Tab({
+    Title = "OTHER 📁",
+    Icon = "folder",
+})
+
+OtherTab:Toggle({
+    Title = "FLY WALK",
+    Value = false,
+    Callback = function(value)
+        Toggles.FlyWalk = value
+
+        task.spawn(function()
+            local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
+            local bg = Instance.new("BodyGyro", hrp)
+            bg.P = 9e4
+            bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+            bg.cframe = hrp.CFrame
+
+            local bv = Instance.new("BodyVelocity", hrp)
+            bv.velocity = Vector3.new(0, 0.1, 0)
+            bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+
+            while Toggles.FlyWalk and task.wait() do
+                pcall(function()
+                    local humanoid = game.Players.LocalPlayer.Character.Humanoid
+                    humanoid.PlatformStand = true
+                    local cam = workspace.CurrentCamera.CFrame
+                    bv.velocity = cam.LookVector * (humanoid.WalkSpeed * 2)
+                    bg.cframe = cam
+                end)
+            end
+
+            bg:Destroy()
+            bv:Destroy()
+            game.Players.LocalPlayer.Character.Humanoid.PlatformStand = false
+        end)
+    end,
+})
+
+OtherTab:Toggle({
+    Title = "SPEED 🚄",
+    Value = false,
+    Callback = function(value)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value and 300 or 16
+    end,
+})
+
+OtherTab:Toggle({
+    Title = "INFINITE JUMP 🦘",
+    Value = false,
+    Callback = function(value)
+        _G.InfJump = value
+
+        game:GetService("UserInputService").JumpRequest:Connect(function()
+            if _G.InfJump then
+                game.Players.LocalPlayer.Character
+                    :FindFirstChildOfClass("Humanoid")
+                    :ChangeState("Jumping")
+            end
+        end)
+    end,
+})
+
+OtherTab:Toggle({
+    Title = "NOCLIP",
+    Value = false,
+    Callback = function(value)
+        Toggles.Noclip = value
+
+        game:GetService("RunService").Stepped:Connect(function()
+            if Toggles.Noclip then
+                for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end,
+})
+
+OtherTab:Button({
+    Title = "SKY GLITCHER (FE)",
+    Callback = function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-sky-destroyer-V2-AXEZZ-110640"))()
+    end,
+})
+
+OtherTab:Button({
+    Title = "EMOTE",
+    Callback = function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Gaze-emote-74592"))()
+    end,
+})
+
+OtherTab:Button({
+    Title = "REJOIN",
+    Callback = function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer)
+    end,
+})
+
+OtherTab:Button({
+    Title = "SERVER HOP",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/m888X7p3"))()
+    end,
+})
+
+--// NOTIFICATION
+WindUI:Notify({
+    Title = "TOXIC 👑 V1",
+    Content = "TOXIC HUB LOADED! 💀",
+    Duration = 5,
+})
+--// AUTO CHAT MESSAGE
+task.spawn(function()
+    local chatMsg = "------------////TOXIC HUB V1 LOADED 🌊 Made by TOXIC 🦁 (STR_TOXIC)////-----------------"
+    pcall(function()
+        if game:GetService("TextChatService").ChatVersion == Enum.ChatVersion.TextChatService then
+            game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync(chatMsg)
+        else
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(chatMsg, "All")
+        end
+    end)
+end)

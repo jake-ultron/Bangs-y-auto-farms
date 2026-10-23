@@ -1,4 +1,4 @@
---// TOXIC 👑 x FAMILY HS — FUSION V7.4 (Walking Fling original restaurado)
+--// TOXIC 👑 x FAMILY HS — FUSION V7
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -6,9 +6,9 @@ local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local LP = Players.LocalPlayer
 
--- ============================================================
+-- =========================================
 -- ANTI-SPAM (cooldown global)
--- ============================================================
+-- ==========================================
 local COOLDOWN = 2.0
 if _G.ToxicFusion_LastStart and (tick() - _G.ToxicFusion_LastStart) < COOLDOWN then
     local restante = COOLDOWN - (tick() - _G.ToxicFusion_LastStart)
@@ -17,9 +17,9 @@ if _G.ToxicFusion_LastStart and (tick() - _G.ToxicFusion_LastStart) < COOLDOWN t
 end
 _G.ToxicFusion_LastStart = tick()
 
--- ============================================================
+-- =========================================
 -- HELPERS DE LIMPIEZA
--- ============================================================
+-- =========================================
 local function getAllContainers()
     local c = { CoreGui }
     local pg = LP:FindFirstChild("PlayerGui")
@@ -79,9 +79,9 @@ end
 FullDestruction()
 destroyOldWindows()
 
--- ============================================================
+-- ==========================================
 -- WINDUI
--- ============================================================
+-- ==========================================
 local WindUI = loadstring(game:HttpGet(
     "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
 ))()
@@ -89,7 +89,7 @@ local WindUI = loadstring(game:HttpGet(
 local Window = WindUI:CreateWindow({
     Title = "TOXIC HS FUSION",
     Icon = "crown",
-    Author = "TOXIC 👑 x Family HS",
+    Author = "TOXIC x Jake_CF",
     Folder = "ToxicHub",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -97,13 +97,23 @@ local Window = WindUI:CreateWindow({
     Resizable = true,
     SideBarWidth = 180,
     ScrollBarEnabled = true,
+    OpenButton = {
+        Title = "Ultra bang",
+        CornerRadius = UDim.new(2, 9),
+        StrokeThickness = 2, 
+        Enabled = true,
+        Draggable = true,
+        Scale = 0.8,
+        Position = UDim2.new(0.5,126,0,20),
+        Color = ColorSequence.new(Color3.fromRGB(0,150,255), Color3.fromRGB(0,0,0))
+    }
 })
 
 _G.ToxicFusion_Window = Window
 
--- ============================================================
+-- =========================================
 -- WATCHER ANTI-DUPLICADOS
--- ============================================================
+-- =========================================
 task.spawn(function()
     task.wait(0.3)
 
@@ -134,9 +144,9 @@ task.spawn(function()
     end)
 end)
 
--- ============================================================
+-- ==========================================
 -- VARIABLES
--- ============================================================
+-- =============================================
 local OffsetX, OffsetY, OffsetZ = 0, 0, 1.1
 local TargetNames = {}
 local PTg = {}
@@ -168,9 +178,9 @@ local Toggles = {
 }
 _G.Fusion_Toggles = Toggles
 
--- ============================================================
+-- =========================================
 -- HELPERS
--- ============================================================
+-- =========================================
 local function Notificar(t, m, d)
     pcall(function() WindUI:Notify({Title=t, Content=m, Duration=d or 3}) end)
 end
@@ -221,9 +231,9 @@ local function ObtenerObjetivosValidos()
     return validos
 end
 
--- ============================================================
+-- =========================================
 -- ALIGN
--- ============================================================
+-- =========================================
 local function ensureAlign()
     local char = LP.Character; if not char then return nil end
     local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return nil end
@@ -261,9 +271,9 @@ local function disableAlign()
     if ao then ao.Enabled = false end
 end
 
--- ============================================================
+-- =========================================
 -- LOOP MAESTRO
--- ============================================================
+-- =========================================
 _G.Fusion_MainLoop = RunService.Heartbeat:Connect(function(dt)
     local char = LP.Character; if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
@@ -338,9 +348,9 @@ _G.Fusion_MainLoop = RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- ============================================================
+-- ==========================================
 -- TABS
--- ============================================================
+-- ==========================================
 local function safeTab(cfg)
     local ok, tab = pcall(function() return Window:Tab(cfg) end)
     if ok then return tab end
@@ -357,9 +367,9 @@ if not AttackTab or not ControlTab then
     Notificar("ERROR", "WindUI no creó pestañas.", 6); return
 end
 
--- ============================================================
+-- ==========================================
 -- TARGET Y ATAQUES
--- ============================================================
+-- ==========================================
 local DropdownTargets = AttackTab:Dropdown({
     Title = "Fijar Objetivos (Multi)",
     Desc = "Selecciona jugadores. El filtro es opcional.",
@@ -446,9 +456,9 @@ AttackTab:Button({
                 DropdownTargets:Refresh(ObtenerJugadores())
             end
         end)
-        task.wait(0.1)
+        task.wait(0)
         pcall(function() DropdownTargets:SetValue(nil) end)
-        task.wait(0.1)
+        task.wait(0)
         refrescandoLista = false
         Notificar("🧹 Reset", "Objetivos desmarcados.", 3)
     end
@@ -461,7 +471,7 @@ AttackTab:Button({
         local nv = ObtenerJugadores()
         if DropdownTargets.SetOptions then DropdownTargets:SetOptions(nv)
         elseif DropdownTargets.Refresh then DropdownTargets:Refresh(nv) end
-        task.wait(0.1); SincronizarDropdown(); refrescandoLista = false
+        task.wait(0); SincronizarDropdown(); refrescandoLista = false
         Notificar("🔄 Actualizado", "Jugadores: "..#nv, 3)
     end
 })
@@ -554,9 +564,9 @@ AttackTab:Toggle({Title="WALKING FLING", Value=false,
         end
     end})
 
--- ============================================================
+-- =========================================
 -- CONTROL X/Y/Z
--- ============================================================
+-- =========================================
 ControlTab:Input({
     Title = "X (lateral)", Desc = "Desplazamiento lateral. Default: 0",
     Placeholder = "0",
@@ -595,9 +605,9 @@ ControlTab:Toggle({
     Callback = function(v) BangShakeEnabled = v end
 })
 
--- ============================================================
+-- ==========================================
 -- CHECKPOINT
--- ============================================================
+-- ==========================================
 local function forceReset()
     if LP.Character then
         local h = LP.Character:FindFirstChildOfClass("Humanoid")
@@ -649,9 +659,9 @@ if CheckTab then
         end})
 end
 
--- ============================================================
+-- ========================================
 -- MOBILE
--- ============================================================
+-- ========================================
 local function createMobileButton()
     if _G.Fusion_MobileGui then return end
     local gui = Instance.new("ScreenGui")
@@ -721,9 +731,9 @@ if MobileTab then
         Callback=function(s) mobileButtonDragEnabled=s end})
 end
 
--- ============================================================
+-- ==========================================
 -- DEFENCE
--- ============================================================
+-- ==========================================
 if DefenceTab then
     DefenceTab:Button({Title="CHOCO EDITION SPAM 👑",
         Callback=function()
@@ -873,13 +883,13 @@ if DefenceTab then
         end})
 end
 
--- ============================================================
+-- =========================================
 -- NOTIFICACIÓN + LIMPIEZA
--- ============================================================
+-- =========================================
 WindUI:Notify({
     Title = "TOXIC HS FUSION 👑",
-    Content = "V7.4 lista 💀",
-    Duration = 5,
+    Content = "V7 lista 💀",
+    Duration = 6,
 })
 
 task.spawn(function()

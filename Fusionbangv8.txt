@@ -829,29 +829,42 @@ if DefenceTab then
                 end
             end)
         end})
+DefenceTab:Toggle({Title="Anti Bang V2 (TP)", Value=false,
+    Callback=function(v)
+        Toggles.AntiBangV2 = v
+        if not v then return end
 
-    DefenceTab:Toggle({Title="Anti Bang V2 (TP)", Value=false,
-        Callback=function(v)
-            Toggles.AntiBangV2 = v
-            task.spawn(function()
-                while Toggles.AntiBangV2 do
-                    pcall(function()
-                        local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                        if not hrp then return end
-                        local g = hrp.CFrame
-                        hrp.CFrame = g * CFrame.new(0,1000,0); task.wait(0.1)
-                        if not Toggles.AntiBangV2 then return end
-                        hrp.CFrame = g; task.wait(0.1)
-                        if not Toggles.AntiBangV2 then return end
-                        hrp.CFrame = g * CFrame.new(0,-1000,0); task.wait(0.1)
-                        if not Toggles.AntiBangV2 then return end
-                        hrp.CFrame = g; task.wait(0.1)
-                    end)
-                end
-            end)
-        end})
+        local RS = game:GetService("RunService")
+        local lastGood = nil
+        local conn
 
-    DefenceTab:Toggle({Title="Anti Fling", Value=false,
+        conn = RS.Heartbeat:Connect(function()
+            if not Toggles.AntiBangV2 then
+                if conn then conn:Disconnect() end
+                return
+            end
+
+            local char = LP.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then lastGood = nil; return end
+
+            local pos = hrp.Position
+
+            -- Si en un frame saltaste >35 studs → bang/teleport forzado
+            if lastGood and (pos - lastGood).Magnitude > 35 then
+                pcall(function()
+                    hrp.CFrame = CFrame.new(lastGood)
+                    hrp.AssemblyLinearVelocity  = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                end)
+            else
+                lastGood = pos
+            end
+        end)
+    end
+})
+
+DefenceTab:Toggle({Title="Anti Fling", Value=false,
         Callback=function(v)
             Toggles.AntiFling = v
             if v then

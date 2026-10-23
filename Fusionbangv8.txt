@@ -829,16 +829,17 @@ if DefenceTab then
                 end
             end)
         end})
+
 DefenceTab:Toggle({Title="Anti Bang V2 (TP)", Value=false,
     Callback=function(v)
         Toggles.AntiBangV2 = v
         if not v then return end
 
-        local RS = game:GetService("RunService")
-        local lastGood = nil
-        local conn
+        local RS  = game:GetService("RunService")
+        local cam = workspace.CurrentCamera
+        local acc, conn = 0, nil
 
-        conn = RS.Heartbeat:Connect(function()
+        conn = RS.Heartbeat:Connect(function(dt)
             if not Toggles.AntiBangV2 then
                 if conn then conn:Disconnect() end
                 return
@@ -846,20 +847,49 @@ DefenceTab:Toggle({Title="Anti Bang V2 (TP)", Value=false,
 
             local char = LP.Character
             local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then lastGood = nil; return end
+            if not hrp then return end
 
-            local pos = hrp.Position
+            acc = acc + dt
+            if acc < 0.35 then return end        -- cada ~0.35s, no 0.1s
+            acc = 0
 
-            -- Si en un frame saltaste >35 studs → bang/teleport forzado
-            if lastGood and (pos - lastGood).Magnitude > 35 then
+            local base        = hrp.CFrame
+            local savedType   = cam.CameraType
+            local savedSubj   = cam.CameraSubject
+            local savedCamCF  = cam.CFrame
+
+            -- 1) Congelar cámara para evitar el flash
+            cam.CameraType    = Enum.CameraType.Scriptable
+            cam.CFrame        = savedCamCF
+
+            -- 2) Pulso CORTO (50 studs) y velocidad a cero
+            pcall(function()
+                hrp.CFrame = base * CFrame.new(0, 50, 0)
+                hrp.AssemblyLinearVelocity  = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+            end)
+
+            -- 3) Volver y liberar la cámara
+            task.delay(0.06, function()
+                if not Toggles.AntiBangV2 then
+                    pcall(function()
+                        cam.CameraType    = savedType
+                        cam.CameraSubject = savedSubj
+                    end)
+                    return
+                end
+                local c = LP.Character
+                local h = c and c:FindFirstChild("HumanoidRootPart")
                 pcall(function()
-                    hrp.CFrame = CFrame.new(lastGood)
-                    hrp.AssemblyLinearVelocity  = Vector3.zero
-                    hrp.AssemblyAngularVelocity = Vector3.zero
+                    if h then
+                        h.CFrame = base
+                        h.AssemblyLinearVelocity  = Vector3.zero
+                        h.AssemblyAngularVelocity = Vector3.zero
+                    end
+                    cam.CameraType    = savedType
+                    cam.CameraSubject = savedSubj
                 end)
-            else
-                lastGood = pos
-            end
+            end)
         end)
     end
 })

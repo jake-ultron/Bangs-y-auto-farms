@@ -638,19 +638,19 @@ _G.Fusion_SpawnConn = LP.CharacterAdded:Connect(function(char)
 end)
 
 if CheckTab then
-    CheckTab:Toggle({Title="Activar Auto Reset", Value=false,
+    CheckTab:Toggle({Title="Activar Auto Reset",Desc = "esta palanca(o toggle) hace que te mueras o suicido automáticamente",Value=false,
         Callback=function(s) autoResetEnabled = s; if s then lastResetTime = tick() end end})
-    CheckTab:Input({Title="Tiempo Auto Reset (s)", Placeholder="30",
+    CheckTab:Input({Title="Tiempo Auto Reset",Desc = "con esto controlas el tiemporizador que el auto reset va ejecutar tu muerte",Placeholder="30",
         Callback=function(t) local n=tonumber(t); if n and n>0 then autoResetInterval=n end end})
     CheckTab:Button({Title="💀 Forzar Reset Ahora", Callback=function() forceReset() end})
-    CheckTab:Button({Title="📍 Save Checkpoint",
+    CheckTab:Button({Title="📍 Save Checkpoint",Desc = "esto modificar el punto de aparición como si fuera tu camita de Minecraft lo guarda y cuando mueres apareces en dónde asignaste",
         Callback=function()
             local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
             if r then SavedCheckpoint = r.Position; Notificar("Checkpoint", "Guardado.", 3) end
         end})
-    CheckTab:Button({Title="🗑️ Clear Checkpoint",
+    CheckTab:Button({Title="🗑️ Clear Checkpoint",Desc = "literal borra el punto de aparición o el punto que guardaste",
         Callback=function() SavedCheckpoint = nil; Notificar("Checkpoint", "Eliminado.", 3) end})
-    CheckTab:Button({Title="🔵 Modo Auto Farm AFK 🔵",
+    CheckTab:Button({Title="⚠️🔵 Modo Auto Farm AFK 🔵⚠️",Desc = "⚠️ ADVERTENCIA ESTO SOLO ES PARA FARMEAR NO PIQUE ESTA FUNCION A MENOS QUE QUIERAS GANAR KILL CON TU CUENTA SECUNDARIA SOLO SIRVE PARA GANAR KILL EN RP 2 PLAYERS⚠️👻",
         Callback=function()
             Notificar("AFK", "Iniciando Auto Farm ATI...", 3)
             pcall(function()
@@ -725,9 +725,9 @@ local function destroyMobileButton()
 end
 
 if MobileTab then
-    MobileTab:Toggle({Title="Mostrar Botón Móvil", Value=false,
+    MobileTab:Toggle({Title="Mostrar Botón Móvil",Desc = "literal muestra el botón y su lo desactivas de esconde👻", Value=false,
         Callback=function(s) if s then createMobileButton() else destroyMobileButton() end end})
-    MobileTab:Toggle({Title="Arrastrar Botón", Value=false,
+    MobileTab:Toggle({Title="Arrastrar Botón",Desc = "permite que puedas mover el botón digital a dónde tú quieras en tu pantalla 🎮",Value=false,
         Callback=function(s) mobileButtonDragEnabled=s end})
 end
 
@@ -735,15 +735,15 @@ end
 -- DEFENCE
 -- ==========================================
 if DefenceTab then
-    DefenceTab:Button({Title="CHOCO EDITION SPAM 👑",
-        Callback=function()
-            pcall(function()
+    DefenceTab:Button({Title="CHOCO EDITION SPAM 👑",Desc = "esto solo sirven para hacer spam de chat más que nada para molestar ⚠️🐒",
+Callback=function()
+pcall(function()
                 loadstring(game:HttpGet(("https://gist.githubusercontent.com/TOXIC-8535/3fb7f2ed806ebe14d31ec8fa87abdf6a/raw/2e5c81dda577d72b2b2b9e00b43477b784a742e0/Choco%2520edition%2520spammer"),true))()
             end)
         end})
 
     local SafeSpotGui, SafeSpotBaseplate, teleported, originalPosition = nil,nil,false,nil
-    DefenceTab:Toggle({Title="Safe Spot", Value=false,
+    DefenceTab:Toggle({Title="Safe Spot",Desc = "genera una plataforma en sepa dónde pero funciona como lugar seguro casil funciona como un Fling podría ser una vercion de temu del blink",Value=false,
         Callback=function(value)
             if value then
                 local tp = Vector3.new(5000,1000,5000)
@@ -788,7 +788,7 @@ if DefenceTab then
             end
         end})
 
-    DefenceTab:Toggle({Title="Anti Void", Value=false,
+    DefenceTab:Toggle({Title="Anti Void",Desc = "esto te permite que no mueras por el vacío muy bueno para los Bang o Fling ya que te lanza a velocidad astronomíaca que literal lleva al vacío",Value=false,
         Callback=function(v)
             Toggles.AntiVoid = v
             task.spawn(function()
@@ -804,7 +804,7 @@ if DefenceTab then
             end)
         end})
 
-    DefenceTab:Toggle({Title="Anti Bang V1", Value=false,
+    DefenceTab:Toggle({Title="Anti Bang V1",Desc = "literalmente un Anti Bang impide que esas labras no se te peguen como cucarachas con ambre Foo 😾💥",Value=false,
         Callback=function(v)
             Toggles.AntiBangV1 = v
             task.spawn(function()
@@ -830,7 +830,7 @@ if DefenceTab then
             end)
         end})
 
-DefenceTab:Toggle({Title="Anti Bang V2 (TP)", Value=false,
+DefenceTab:Toggle({Title="Anti Bang V2 (TP)",Desc = "lo mismo pero a basa de riatazos esto los lleva al más aya o a puras sacudidas como despegarse de una pulga👻",Value=false,
     Callback=function(v)
         Toggles.AntiBangV2 = v
         if not v then return end
@@ -850,7 +850,7 @@ DefenceTab:Toggle({Title="Anti Bang V2 (TP)", Value=false,
             if not hrp then return end
 
             acc = acc + dt
-            if acc < 0.35 then return end        -- cada ~0.35s, no 0.1s
+            if acc < 0.10 then return end --cada ~0.35s, no 0.1s
             acc = 0
 
             local base        = hrp.CFrame
@@ -864,12 +864,11 @@ DefenceTab:Toggle({Title="Anti Bang V2 (TP)", Value=false,
 
             -- 2) Pulso CORTO (50 studs) y velocidad a cero
             pcall(function()
-                hrp.CFrame = base * CFrame.new(0, 50, 0)
+                hrp.CFrame = base * CFrame.new(0,9e9,0)
                 hrp.AssemblyLinearVelocity  = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
             end)
-
-            -- 3) Volver y liberar la cámara
+-- 3) Volver y liberar la cámara
             task.delay(0.06, function()
                 if not Toggles.AntiBangV2 then
                     pcall(function()
@@ -894,7 +893,7 @@ DefenceTab:Toggle({Title="Anti Bang V2 (TP)", Value=false,
     end
 })
 
-DefenceTab:Toggle({Title="Anti Fling", Value=false,
+DefenceTab:Toggle({Title="Anti Fling",Desc = "te defiende del fling impide que salgas disparado como pelota bien inflado al espacio 🐒",Value=false,
         Callback=function(v)
             Toggles.AntiFling = v
             if v then

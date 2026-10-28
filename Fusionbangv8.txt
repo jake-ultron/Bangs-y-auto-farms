@@ -850,7 +850,7 @@ DefenceTab:Toggle({Title="Anti Bang V2 (TP)",Desc = "lo mismo pero a basa de ria
             if not hrp then return end
 
             acc = acc + dt
-            if acc < 0.10 then return end --cada ~0.35s, no 0.1s
+            if acc < 0.26 then return end --cada ~0.35s, no 0.1s
             acc = 0
 
             local base        = hrp.CFrame
@@ -864,7 +864,7 @@ DefenceTab:Toggle({Title="Anti Bang V2 (TP)",Desc = "lo mismo pero a basa de ria
 
             -- 2) Pulso CORTO (50 studs) y velocidad a cero
             pcall(function()
-                hrp.CFrame = base * CFrame.new(0,999,0)
+                hrp.CFrame = base * CFrame.new(0,666,0)
                 hrp.AssemblyLinearVelocity  = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
             end)

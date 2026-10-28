@@ -850,7 +850,7 @@ DefenceTab:Toggle({Title="Anti Bang V2 (TP)",Desc = "lo mismo pero a basa de ria
             if not hrp then return end
 
             acc = acc + dt
-            if acc < 0.26 then return end --cada ~0.35s, no 0.1s
+            if acc < 0.16 then return end --cada ~0.35s, no 0.1s
             acc = 0
 
             local base        = hrp.CFrame
@@ -869,7 +869,7 @@ DefenceTab:Toggle({Title="Anti Bang V2 (TP)",Desc = "lo mismo pero a basa de ria
                 hrp.AssemblyAngularVelocity = Vector3.zero
             end)
 -- 3) Volver y liberar la cámara
-            task.delay(0.06, function()
+            task.delay(0.1, function()
                 if not Toggles.AntiBangV2 then
                     pcall(function()
                         cam.CameraType    = savedType

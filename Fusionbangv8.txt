@@ -1,4 +1,4 @@
---// TOXIC 👑 x FAMILY HS — FUSION V7
+--// TOXIC 👑 x FAMILY HS — FUSION V8
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -746,7 +746,7 @@ pcall(function()
     DefenceTab:Toggle({Title="Safe Spot",Desc = "genera una plataforma en sepa dónde pero funciona como lugar seguro casil funciona como un Fling podría ser una vercion de temu del blink",Value=false,
         Callback=function(value)
             if value then
-                local tp = Vector3.new(5000,1000,5000)
+                local tp = Vector3.new(9e9,9e9,9e9)
                 SafeSpotBaseplate = Instance.new("Part")
                 SafeSpotBaseplate.Size = Vector3.new(100,1,100)
                 SafeSpotBaseplate.Position = tp - Vector3.new(0,5,0)

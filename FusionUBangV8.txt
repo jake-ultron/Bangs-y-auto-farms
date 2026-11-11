@@ -157,8 +157,8 @@ local OrbitSpeed = 2.0
 local orbitAngle = 0
 local BangShakeEnabled = false
 
-local TargetSwitchInterval = 5.0
-local lastSwitchTime = 0.9
+local TargetSwitchInterval = 9
+local lastSwitchTime = 1
 local currentTargetIndex = 1
 local activeTarget = nil
 

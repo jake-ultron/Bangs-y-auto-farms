@@ -73,6 +73,7 @@ local function FullDestruction()
     if _G.Fusion_MainLoop then _G.Fusion_MainLoop:Disconnect(); _G.Fusion_MainLoop = nil end
     if _G.Fusion_MobileGui then pcall(function() _G.Fusion_MobileGui:Destroy() end); _G.Fusion_MobileGui = nil end
     if _G.Fusion_SafeSpotCleanup then pcall(_G.Fusion_SafeSpotCleanup); _G.Fusion_SafeSpotCleanup = nil end
+    _G.Fusion_AutoRefresh = nil
     if _G.Fusion_Toggles then for k in pairs(_G.Fusion_Toggles) do _G.Fusion_Toggles[k] = false end end
     if LP and LP.Character then wipeAlign(LP.Character:FindFirstChild("HumanoidRootPart")) end
 end
@@ -185,9 +186,22 @@ _G.Fusion_Toggles = Toggles
 -- =========================================
 -- HELPERS
 -- =========================================
+-- ===== ANTI-SPAM DE NOTIFICACIONES =====
+local NOTIF_DELAY = 2.0
+local lastNotif, pendingNotif = 0, nil
+
+local function mostrarNotif(t, m, d)
+    lastNotif = tick()
+    pcall(function() WindUI:Notify({Title=t, Content=m, Duration=d or 3}) end) end
+
 local function Notificar(t, m, d)
-    pcall(function() WindUI:Notify({Title=t, Content=m, Duration=d or 3}) end)
-end
+    local espera = NOTIF_DELAY - (tick() - lastNotif)
+    if pendingNotif then pendingNotif = {t, m, d}; return end
+    if espera <= 0 then mostrarNotif(t, m, d); return end
+    pendingNotif = {t, m, d}
+    task.delay(espera, function()
+        local p = pendingNotif; pendingNotif = nil
+        if p then mostrarNotif(p[1], p[2], p[3]) end end) end
 
 local function ObtenerJugadores()
     local lista = {}; mapaNombres = {}
@@ -374,6 +388,17 @@ end
 -- ==========================================
 -- TARGET Y ATAQUES
 -- ==========================================
+-- ===== DROPDOWN: LIMPIEZA Y REFRESCO =====
+local function ddSelect(dd, sel)
+    if not dd then return end
+    pcall(function()
+        if dd.Select then dd:Select(sel) elseif dd.SetValue then dd:SetValue(sel) end end) end
+
+local function ddRefresh(dd, lista)
+    if not dd then return end
+    pcall(function()
+        if dd.Refresh then dd:Refresh(lista) elseif dd.SetOptions then dd:SetOptions(lista) end end) end
+
 local DropdownTargets = AttackTab:Dropdown({
     Title = "Fijar Objetivos (Multi)",
     Desc = "Selecciona jugadores. El filtro es opcional.",
@@ -422,6 +447,9 @@ AttackTab:Input({
         if n and n > 0 then
             TargetSwitchInterval = n
             lastSwitchTime = 0
+        elseif not t or t:match("^%s*$") then
+            TargetSwitchInterval = 5.0
+            lastSwitchTime = 0
         end
     end
 })
@@ -434,10 +462,7 @@ local function SincronizarDropdown()
             if t == real then table.insert(sel, fmt); break end
         end
     end
-    pcall(function()
-        if #sel == 0 then DropdownTargets:SetValue(nil)
-        else DropdownTargets:SetValue(sel) end
-    end)
+    ddSelect(DropdownTargets, #sel > 0 and sel or nil)
 end
 
 AttackTab:Button({
@@ -449,20 +474,12 @@ AttackTab:Button({
         activeTarget = nil
         currentTargetIndex = 1
         lastSwitchTime = 0
-        pcall(function() DropdownTargets:SetValue({}) end)
+        ddSelect(DropdownTargets, nil)
         task.wait(0.05)
-        pcall(function() DropdownTargets:SetValue(nil) end)
+        ddRefresh(DropdownTargets, ObtenerJugadores())
         task.wait(0.05)
-        pcall(function()
-            if DropdownTargets.SetOptions then
-                DropdownTargets:SetOptions(ObtenerJugadores())
-            elseif DropdownTargets.Refresh then
-                DropdownTargets:Refresh(ObtenerJugadores())
-            end
-        end)
-        task.wait(0)
-        pcall(function() DropdownTargets:SetValue(nil) end)
-        task.wait(0)
+        ddSelect(DropdownTargets, nil)
+        task.wait(0.1)
         refrescandoLista = false
         Notificar("🧹 Reset", "Objetivos desmarcados.", 3)
     end
@@ -473,12 +490,28 @@ AttackTab:Button({
     Callback = function()
         refrescandoLista = true
         local nv = ObtenerJugadores()
-        if DropdownTargets.SetOptions then DropdownTargets:SetOptions(nv)
-        elseif DropdownTargets.Refresh then DropdownTargets:Refresh(nv) end
-        task.wait(0); SincronizarDropdown(); refrescandoLista = false
+        ddRefresh(DropdownTargets, nv)
+        task.wait(0.1); SincronizarDropdown(); refrescandoLista = false
         Notificar("🔄 Actualizado", "Jugadores: "..#nv, 3)
     end
 })
+
+-- ===== AUTO-REFRESCO DE LISTA =====
+local autoRefreshToken = {}
+_G.Fusion_AutoRefresh = autoRefreshToken
+local lastListKey = ""
+task.spawn(function()
+    while _G.Fusion_AutoRefresh == autoRefreshToken do
+        task.wait(36)
+        local ks = {}
+        for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then table.insert(ks, p.Name.."|"..p.DisplayName) end end
+        table.sort(ks)
+        local key = table.concat(ks, "\n")
+        if _G.Fusion_AutoRefresh == autoRefreshToken and DropdownTargets and not DropdownTargets.Opened and key ~= lastListKey then
+            lastListKey = key
+            refrescandoLista = true
+            ddRefresh(DropdownTargets, ObtenerJugadores())
+            task.wait(0.1); SincronizarDropdown(); refrescandoLista = false end end end)
 
 AttackTab:Button({Title="GOTO TARGET", Desc="Ir al primer objetivo",
     Callback=function()
@@ -594,7 +627,7 @@ ControlTab:Input({
 ControlTab:Input({
     Title = "Velocidad de rotación", Desc = "Solo para Orbit. Default: 2",
     Placeholder = "2",
-    Callback = function(v) local n = tonumber(v); if n then OrbitSpeed = n end end
+    Callback = function(v) local n = tonumber(v); if n then OrbitSpeed = n elseif not v or v:match("^%s*$") then OrbitSpeed = 2.0 end end
 })
 
 ControlTab:Input({
@@ -646,7 +679,7 @@ if CheckTab then
     CheckTab:Toggle({Title="Activar Auto Reset",Desc = "esta palanca(o toggle) hace que te mueras o suicido automáticamente",Value=false,
         Callback=function(s) autoResetEnabled = s; if s then lastResetTime = tick() end end})
     CheckTab:Input({Title="Tiempo Auto Reset",Desc = "con esto controlas el tiemporizador que el auto reset va ejecutar tu muerte",Placeholder="30",
-        Callback=function(t) local n=tonumber(t); if n and n>0 then autoResetInterval=n end end})
+        Callback=function(t) local n=tonumber(t); if n and n>0 then autoResetInterval=n elseif not t or t:match("^%s*$") then autoResetInterval=30 end end})
     CheckTab:Button({Title="💀 Forzar Reset Ahora", Callback=function() forceReset() end})
     CheckTab:Button({Title="📍 Save Checkpoint",Desc = "esto modificar el punto de aparición como si fuera tu camita de Minecraft lo guarda y cuando mueres apareces en dónde asignaste",
         Callback=function()
@@ -670,9 +703,7 @@ end
 -- ===== BOTÓN DIGITAL MULTI-LÓGICA =====
 local MobileOpts = {
     {"BANG","Bang","BANG"}, {"ORBIT","Orbit","ORBIT"}, {"HEADSIT","Headsit","HEAD"},
-    {"VIEW TARGET","ViewTarget","VIEW"}, {"ANTI VOID","AntiVoid","VOID"},
-    {"ANTI BANG V1","AntiBangV1","AB V1"}, {"ANTI BANG V2","AntiBangV2","AB V2"},
-    {"ANTI FLING","AntiFling","A.FLG"}
+    {"VIEW TARGET","ViewTarget","VIEW"}
 }
 
 local function mobileKeys()
@@ -775,14 +806,17 @@ if MobileTab then
     MobileTab:Toggle({Title="Arrastrar Botón",Desc = "permite que puedas mover el botón digital a dónde tú quieras en tu pantalla 🎮",Value=false,
         Callback=function(s) mobileButtonDragEnabled=s end})
     MobileTab:Dropdown({Title="Lógicas del botón digital",Desc = "elige cuáles enciende y apaga el botón (Walking Fling no entra)",
-        Values={"BANG","ORBIT","HEADSIT","VIEW TARGET","ANTI VOID","ANTI BANG V1","ANTI BANG V2","ANTI FLING"},
+        Values={"BANG","ORBIT","HEADSIT","VIEW TARGET"},
         Value={"BANG"}, AllowNone=true, Multi=true,
         Callback=function(val)
-            MobileSel = {}
+            local nueva = {}
             local list = type(val) == "table" and val or {val}
             for _, n in ipairs(list) do
                 if type(n) == "table" then n = n.Title end
-                for _, o in ipairs(MobileOpts) do if o[1] == n then MobileSel[o[2]] = true end end end
+                for _, o in ipairs(MobileOpts) do if o[1] == n then nueva[o[2]] = true end end end
+            for k in pairs(MobileSel) do
+                if not nueva[k] and Toggles[k] then setLogic(k, false) end end
+            MobileSel = nueva
             refreshMobileButton() end})
 end
 
@@ -864,7 +898,7 @@ pcall(function()
                     teleported = false
                     btn.BackgroundColor3 = Color3.fromRGB(100,100,100); btn.Text = "SAFE\nTP" end end) end})
 
-    ToggleRefs.AntiVoid = DefenceTab:Toggle({Title="Anti Void",Desc = "esto te permite que no mueras por el vacío muy bueno para los Bang o Fling ya que te lanza a velocidad astronomíaca que literal lleva al vacío",Value=false,
+    DefenceTab:Toggle({Title="Anti Void",Desc = "esto te permite que no mueras por el vacío muy bueno para los Bang o Fling ya que te lanza a velocidad astronomíaca que literal lleva al vacío",Value=false,
         Callback=function(v)
             Toggles.AntiVoid = v
             task.spawn(function()
@@ -880,7 +914,7 @@ pcall(function()
             end)
         end})
 
-    ToggleRefs.AntiBangV1 = DefenceTab:Toggle({Title="Anti Bang V1",Desc = "literalmente un Anti Bang impide que esas labras no se te peguen como cucarachas con ambre Foo 😾💥",Value=false,
+    DefenceTab:Toggle({Title="Anti Bang V1",Desc = "literalmente un Anti Bang impide que esas labras no se te peguen como cucarachas con ambre Foo 😾💥",Value=false,
         Callback=function(v)
             Toggles.AntiBangV1 = v
             task.spawn(function()
@@ -906,7 +940,7 @@ pcall(function()
             end)
         end})
 
-ToggleRefs.AntiBangV2 = DefenceTab:Toggle({Title="Anti Bang V2 (TP)",Desc = "lo mismo pero a basa de riatazos esto los lleva al más aya o a puras sacudidas como despegarse de una pulga👻",Value=false,
+DefenceTab:Toggle({Title="Anti Bang V2 (TP)",Desc = "lo mismo pero a basa de riatazos esto los lleva al más aya o a puras sacudidas como despegarse de una pulga👻",Value=false,
     Callback=function(v)
         Toggles.AntiBangV2 = v
         if not v then return end
@@ -969,7 +1003,7 @@ ToggleRefs.AntiBangV2 = DefenceTab:Toggle({Title="Anti Bang V2 (TP)",Desc = "lo 
     end
 })
 
-ToggleRefs.AntiFling = DefenceTab:Toggle({Title="Anti Fling",Desc = "te defiende del fling impide que salgas disparado como pelota bien inflado al espacio 🐒",Value=false,
+DefenceTab:Toggle({Title="Anti Fling",Desc = "te defiende del fling impide que salgas disparado como pelota bien inflado al espacio 🐒",Value=false,
         Callback=function(v)
             Toggles.AntiFling = v
             if v then

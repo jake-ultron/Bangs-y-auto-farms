@@ -89,7 +89,7 @@ local WindUI = loadstring(game:HttpGet(
 ))()
 
 local Window = WindUI:CreateWindow({
-    Title = "TOXIC HS FUSION",
+    Title = "TOXIC X FUSION",
     Icon = "crown",
     Author = "TOXIC x Jake_CF",
     Folder = "ToxicHub",
@@ -157,7 +157,7 @@ local OrbitSpeed = 2.0
 local orbitAngle = 0
 local BangShakeEnabled = false
 
-local TargetSwitchInterval = 1
+local TargetSwitchInterval = 9
 local lastSwitchTime = 1
 local currentTargetIndex = 1
 local activeTarget = nil
@@ -440,16 +440,16 @@ AttackTab:Input({
 
 AttackTab:Input({
     Title = "Tiempo entre targets (multi)",
-    Desc = "Segundos antes de cambiar al siguiente objetivo. Default: 5",
-    Placeholder = "5",
+    Desc = "Segundos antes de cambiar al siguiente objetivo. Default: 9",
+    Placeholder = "9",
     Callback = function(t)
         local n = tonumber(t)
         if n and n > 0 then
             TargetSwitchInterval = n
-            lastSwitchTime = 0
+            lastSwitchTime = 1
         elseif not t or t:match("^%s*$") then
-            TargetSwitchInterval = 5.0
-            lastSwitchTime = 0
+            TargetSwitchInterval = 9.0
+            lastSwitchTime = 1
         end
     end
 })

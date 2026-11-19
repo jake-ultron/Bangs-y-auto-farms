@@ -493,14 +493,13 @@ PhysTab:Button({Title="Cambiar Pose", Desc="Prone, Face-up, Sit, Side",
         PoseIdx = PoseIdx % #POSES + 1; local p = POSES[PoseIdx]
         PhysPitch = p.p; PhysRoll = p.r; Notificar("Pose", "Cambiada", 3)
     end})
-PhysTab:Button({Title="RESET", Callback=function()
+PhysTab:Button({Title="RESET", Color=Color3.fromRGB(180,40,40), Callback=function()
     OffsetX, OffsetY, OffsetZ = 0, 2, 0
     PhysPitch, PhysRoll = -90, 0
     OrbitSpeed = 2.0; BangSpeed = 1; StrafeSpeed = 22
     frozenCF = nil; moveOffset = Vector3.zero; strafeGrabCF = nil
     Notificar("RESET", "Todo a default", 3)
-end}, Color=Color3.fromRGB(180,40,40)})
-
+end})
 -- ===== CHECKPOINT =====
 local function forceReset()
     if LP.Character then

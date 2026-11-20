@@ -1,4 +1,4 @@
---// TOXIC 👑 x FAMILY HS — FUSION V11 (STRAFE TEO REAL)
+--// TOXIC 👑 x FAMILY CF — FUSION V9 (STRAFE TEO)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -58,7 +58,7 @@ end
 FullDestruction(); destroyOldWindows()
 
 -- ===== WINDUI =====
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+local WindUI = loadstring(game:HttpGet("\x68\x74\x74\x70\x73\x3a\x2f\x2f\x72\x61\x77\x2e\x67\x69\x74\x68\x75\x62\x75\x73\x65\x72\x63\x6f\x6e\x74\x65\x6e\x74\x2e\x63\x6f\x6d\x2f\x46\x6f\x6f\x74\x61\x67\x65\x73\x75\x73\x2f\x57\x69\x6e\x64\x55\x49\x2f\x6d\x61\x69\x6e\x2f\x64\x69\x73\x74\x2f\x6d\x61\x69\x6e\x2e\x6c\x75\x61"))()
 local Window = WindUI:CreateWindow({
     Title = "TOXIC X FUSION", Icon = "crown", Author = "TOXIC x Jake_CF", Folder = "ToxicHub",
     Size = UDim2.fromOffset(580, 460), Transparent = true, Theme = "Amber", Resizable = true,
@@ -531,13 +531,13 @@ end)
 if CheckTab then
     CheckTab:Toggle({Title="Activar Auto Reset",Desc="te matas automáticamente",Value=false, Callback=function(s) autoResetEnabled = s; if s then lastResetTime = tick() end end})
     CheckTab:Input({Title="Tiempo Auto Reset",Placeholder="30", Callback=function(t) local n=tonumber(t); if n and n>0 then autoResetInterval=n elseif not t or t:match("^%s*$") then autoResetInterval=30 end end})
-    CheckTab:Button({Title="💀 Forzar Reset Ahora", Callback=function() forceReset() end})
-    CheckTab:Button({Title="📍 Save Checkpoint",Desc="guarda tu punto de aparición", Callback=function()
+    CheckTab:Button({Title="💀 Forzar Reset Ahora",Color=Color3.fromRGB(180,40,40),Callback=function() forceReset() end})
+    CheckTab:Button({Title="📍 guarda Checkpoint",Desc="esto modificar el punto de aparición como si fuera tu camita de Minecraft lo guarda y cuando mueres apareces en dónde asignaste y guarda tu punto de aparición", Callback=function()
         local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if r then SavedCheckpoint = r.Position; Notificar("Checkpoint", "Guardado.", 3) end
     end})
     CheckTab:Button({Title="🗑️ Clear Checkpoint",Desc="borra el punto de aparición", Callback=function() SavedCheckpoint = nil; Notificar("Checkpoint", "Eliminado.", 3) end})
-    CheckTab:Button({Title="⚠️🔵 Modo Auto Farm AFK 🔵⚠️",Desc="⚠️ SOLO PARA FARMEAR", Callback=function()
+    CheckTab:Button({Title="⚠️🔵 Modo Auto Farm AFK 🔵⚠️",Desc="⚠️ ADVERTENCIA ESTO SOLO ES PARA FARMEAR NO PIQUE ESTA FUNCION A MENOS QUE QUIERAS GANAR KILL CON TU CUENTA SECUNDARIA SOLO SIRVE PARA GANAR KILL EN RP 2 PLAYERS⚠️👻",Callback=function()
         Notificar("AFK", "Iniciando Auto Farm...", 3)
         pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/wyMSZ29R"))() end)
     end})
@@ -784,13 +784,13 @@ if DefenceTab then
 end
 
 -- ===== NOTIFICACIÓN + LIMPIEZA =====
-WindUI:Notify({Title = "TOXIC HS FUSION 👑", Content = "V11 - Strafe Teo Real + X/Y/Z unificados", Duration = 6})
+WindUI:Notify({Title = "ULTRA FUSION 👑", Content = "V9 - Strafe Teo + X/Y/Z unificados", Duration = 6})
 task.spawn(function()
     task.wait(2)
     local ui = (typeof(gethui) == "function" and gethui()) or CoreGui or LP:WaitForChild("PlayerGui")
     local mainGui = nil
     for _, obj in ipairs(ui:GetDescendants()) do
-        if obj:IsA("TextLabel") and obj.Text == "TOXIC HS FUSION" then
+        if obj:IsA("TextLabel") and obj.Text == "ULTRA FUSION" then
             mainGui = obj:FindFirstAncestorWhichIsA("ScreenGui"); break
         end
     end

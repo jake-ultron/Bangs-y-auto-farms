@@ -1,4 +1,4 @@
---// TOXIC 👑 x FAMILY CF — FUSION V9 (STRAFE TEO)
+--// FUSION 👑 x FAMILY CF — V10 (STRAFE + GRAB RESET)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -7,25 +7,22 @@ local LP = Players.LocalPlayer
 
 -- ===== ANTI-DUPLICADOS Y ANTI-SPAM =====
 local COOLDOWN = 2.0
-if _G.ToxicFusion_LastStart and (tick() - _G.ToxicFusion_LastStart) < COOLDOWN then
-    local restante = COOLDOWN - (tick() - _G.ToxicFusion_LastStart)
-    warn(string.format("[TOXIC] Cooldown activo — espera %.1fs.", restante))
-    return
+if _G.Fusion_LastStart and (tick() - _G.Fusion_LastStart) < COOLDOWN then
+    warn(string.format("[FUSION] Cooldown activo — espera %.1fs.", COOLDOWN - (tick() - _G.Fusion_LastStart))); return
 end
-_G.ToxicFusion_LastStart = tick()
+_G.Fusion_LastStart = tick()
 
--- ===== LIMPIEZA =====
 local function getAllContainers()
-    local c = { CoreGui }
-    local pg = LP:FindFirstChild("PlayerGui")
+    local c = { CoreGui }; local pg = LP:FindFirstChild("PlayerGui")
     if pg then table.insert(c, pg) end
     if typeof(gethui) == "function" then pcall(function() table.insert(c, gethui()) end) end
     return c
 end
-local function isToxicScreen(gui)
+-- Arreglo del bug de duplicados (busca el nombre real de la ventana)
+local function isFusionScreen(gui)
     if not gui or not gui:IsA("ScreenGui") then return false end
     for _, d in ipairs(gui:GetDescendants()) do
-        if d:IsA("TextLabel") and d.Text == "TOXIC HS FUSION" then return true end
+        if d:IsA("TextLabel") and (d.Text == "FUSION X CF" or d.Text == "FUSION CF") then return true end
     end
     return false
 end
@@ -33,14 +30,14 @@ local function destroyOldWindows(exceptGui)
     for _, container in ipairs(getAllContainers()) do
         if container then pcall(function()
             for _, gui in ipairs(container:GetChildren()) do
-                if gui ~= exceptGui and isToxicScreen(gui) then gui:Destroy() end
+                if gui ~= exceptGui and isFusionScreen(gui) then gui:Destroy() end
             end
         end) end
     end
 end
 local function wipeAlign(root)
     if not root then return end
-    for _, n in ipairs({"ToxicAtt","ToxicPos","ToxicOri"}) do
+    for _, n in ipairs({"FusionAtt","FusionPos","FusionOri"}) do
         local c = root:FindFirstChild(n); if c then c:Destroy() end
     end
     pcall(function() root.AssemblyLinearVelocity = Vector3.zero; root.AssemblyAngularVelocity = Vector3.zero end)
@@ -58,55 +55,51 @@ end
 FullDestruction(); destroyOldWindows()
 
 -- ===== WINDUI =====
-local WindUI = loadstring(game:HttpGet("\x68\x74\x74\x70\x73\x3a\x2f\x2f\x72\x61\x77\x2e\x67\x69\x74\x68\x75\x62\x75\x73\x65\x72\x63\x6f\x6e\x74\x65\x6e\x74\x2e\x63\x6f\x6d\x2f\x46\x6f\x6f\x74\x61\x67\x65\x73\x75\x73\x2f\x57\x69\x6e\x64\x55\x49\x2f\x6d\x61\x69\x6e\x2f\x64\x69\x73\x74\x2f\x6d\x61\x69\x6e\x2e\x6c\x75\x61"))()
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 local Window = WindUI:CreateWindow({
-    Title = "TOXIC X FUSION", Icon = "crown", Author = "TOXIC x Jake_CF", Folder = "ToxicHub",
+    Title = "FUSION X CF", Icon = "crown", Author = "CF Hub", Folder = "FusionCF",
     Size = UDim2.fromOffset(580, 460), Transparent = true, Theme = "Amber", Resizable = true,
     SideBarWidth = 180, ScrollBarEnabled = true,
     OpenButton = { Title = "Ultra bang", CornerRadius = UDim.new(2, 9), StrokeThickness = 2, Enabled = true,
         Draggable = true, Scale = 0.8, Position = UDim2.new(0.5,126,0,20),
         Color = ColorSequence.new(Color3.fromRGB(0,150,255), Color3.fromRGB(0,0,0)) }
 })
-_G.ToxicFusion_Window = Window
+_G.Fusion_Window = Window
 
 -- ===== WATCHER ANTI-DUPLICADOS =====
 task.spawn(function()
-    task.wait(0.3); local mine = nil
+    task.wait(0.5); local mine = nil
     for _, cont in ipairs(getAllContainers()) do
         if cont then for _, obj in ipairs(cont:GetDescendants()) do
-            if obj:IsA("TextLabel") and obj.Text == "TOXIC HS FUSION" then mine = obj:FindFirstAncestorWhichIsA("ScreenGui"); break end
+            if obj:IsA("TextLabel") and (obj.Text == "FUSION X CF" or obj.Text == "FUSION CF") then mine = obj:FindFirstAncestorWhichIsA("ScreenGui"); break end
         end end
         if mine then break end
     end
     if not mine then return end
-    _G.ToxicFusion_CurrentGui = mine
+    _G.Fusion_CurrentGui = mine
     task.spawn(function()
-        while _G.ToxicFusion_CurrentGui == mine and mine.Parent do
+        while _G.Fusion_CurrentGui == mine and mine.Parent do
             task.wait(0.5); pcall(function() destroyOldWindows(mine) end)
         end
-        if _G.ToxicFusion_CurrentGui == mine then _G.ToxicFusion_CurrentGui = nil end
+        if _G.Fusion_CurrentGui == mine then _G.Fusion_CurrentGui = nil end
     end)
 end)
 
--- ===== VARIABLES CONSOLIDADAS (SEMÁNTICA TEO) =====
--- OffsetX = lateral | OffsetY = altura | OffsetZ = detrás (positivo = atrás)
+-- ===== VARIABLES =====
 local OffsetX, OffsetY, OffsetZ = 0, 2, 0
 local PhysPitch, PhysRoll = -90, 0
-local PhysYawMode = 1  -- 1=TARGET, 2=FREE, 3=SPIN
-local PhysSpin = 60
+local PhysYawMode = 1; local PhysSpin = 60
 local BangSpeed = 1; local BangShakeEnabled = false
 local OrbitSpeed = 2.0; local orbitAngle = 0
-local StrafeSpeed = 22
+local StrafeSpeed = 22; local PhysSpeed = 10 -- Nueva variable de velocidad
 local WASDMoveEnabled = false; local moveOffset = Vector3.zero
 local SyncMode = true; local HoldMode = false; local frozenCF = nil
 local AntiFlingOnGrab = true; local MaxGrabSpeed = 35; local GrabDamp = 0.15
-local StabOnGrab = true
+local StabOnGrab = true; local ResetOnGrab = false
 local grabActive = false; local grabDampUntil = 0
 local strafeGrabCF = nil; local freeYaw = 0; local spinAcc = 0
-local AlwaysClosest = false
-local PoseIdx = 1
+local AlwaysClosest = false; local PoseIdx = 1
 local POSES = { {p=-90,r=0}, {p=90,r=0}, {p=0,r=0}, {p=-90,r=90} }
-
 local TargetNames = {}; local PTg = {}; local ExcludeNames = {}
 local TargetSwitchInterval = 9; local lastSwitchTime = 1
 local currentTargetIndex = 1; local activeTarget = nil
@@ -117,13 +110,12 @@ local mobileButton = nil; local mobileButtonDragEnabled = false
 local refrescandoLista = false; local mapaNombres = {}
 local MobileSel = {Bang=true}; local ToggleRefs = {}
 local lastGrabTarget, lastGrabTime = nil, 0
-
 local Toggles = { Strafe=false, Bang=false, Headsit=false, Orbit=false, WalkingFling=false, AntiVoid=false, AntiBangV1=false, AntiBangV2=false, AntiFling=false, ViewTarget=false }
 _G.Fusion_Toggles = Toggles
 
 -- ===== HELPERS =====
 local NOTIF_DELAY = 2.0; local lastNotif, pendingNotif = 0, nil
-local function mostrarNotif(t, m, d) lastNotif = tick(); pcall(function() WindUI:Notify({Title=t, Content=m, Duration=d or 3}) end) end
+local function mostrarNotif(t, m, d) lastNotif = tick(); pcall(function() Window:Notify({Title=t, Content=m, Duration=d or 3}) end) end
 local function Notificar(t, m, d)
     local espera = NOTIF_DELAY - (tick() - lastNotif)
     if pendingNotif then pendingNotif = {t, m, d}; return end
@@ -143,11 +135,7 @@ local function ExtraerNombresReales(val)
     elseif type(val) == "string" then table.insert(nombres, mapaNombres[val] or val) end
     return nombres
 end
-local function isExcluded(p)
-    if not p then return false end
-    for _, n in ipairs(ExcludeNames) do if p.Name:lower() == n:lower() then return true end end
-    return false
-end
+local function isExcluded(p) if not p then return false end; for _, n in ipairs(ExcludeNames) do if p.Name:lower() == n:lower() then return true end end; return false end
 local function matchFilter(p)
     if isExcluded(p) then return false end
     if #PTg == 0 then return true end
@@ -216,13 +204,12 @@ local function pickActiveTarget(targets)
     end
     activeTarget = targets[1]; currentTargetIndex = 1; return activeTarget
 end
+-- Lógica de Auto-Grab y Reset
+local GrabRF = game:GetService("ReplicatedStorage"):WaitForChild("Packages", 10) and game:GetService("ReplicatedStorage").Packages:FindFirstChild("Knit", true) and game:GetService("ReplicatedStorage").Packages.Knit.Services.CombatService.RF.Grab or nil
 
--- ===== STRAFE STATE (TEO REAL) =====
 local strafeState = nil
 local function strafeEnable()
-    local char = LP.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local char = LP.Character; local hum = char and char:FindFirstChildOfClass("Humanoid"); local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp then return end
     freeYaw = math.rad(hrp.Orientation.Y)
     strafeState = { anchored = hrp.Anchored, platform = hum.PlatformStand, autorotate = hum.AutoRotate }
@@ -232,30 +219,23 @@ local function strafeEnable()
     moveOffset = Vector3.zero; frozenCF = nil; strafeGrabCF = nil
 end
 local function strafeDisable()
-    local char = LP.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local char = LP.Character; local hum = char and char:FindFirstChildOfClass("Humanoid"); local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if strafeState and hum and hrp then
-        hrp.Anchored = strafeState.anchored
-        hum.PlatformStand = strafeState.platform
-        hum.AutoRotate = strafeState.autorotate
+        hrp.Anchored = strafeState.anchored; hum.PlatformStand = strafeState.platform; hum.AutoRotate = strafeState.autorotate
     end
     strafeState = nil; frozenCF = nil; strafeGrabCF = nil; moveOffset = Vector3.zero
 end
 
--- ===== LOOP MAESTRO (TODOS LOS MODOS) =====
+-- ===== LOOP MAESTRO =====
 local currentMode = nil
 _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     local char = LP.Character; if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid"); local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp or hum.Health <= 0 then return end
 
     local mode = nil
-    if Toggles.Strafe then mode = "strafe"
-    elseif Toggles.Bang then mode = "bang"
-    elseif Toggles.Headsit then mode = "headsit"
-    elseif Toggles.Orbit then mode = "orbit" end
+    if Toggles.Strafe then mode = "strafe" elseif Toggles.Bang then mode = "bang"
+    elseif Toggles.Headsit then mode = "headsit" elseif Toggles.Orbit then mode = "orbit" end
 
     if mode ~= currentMode then
         if mode then strafeEnable() else strafeDisable() end
@@ -267,15 +247,29 @@ _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     if not SyncMode and not hrp.Anchored then hrp.Anchored = true end
 
     if PhysYawMode == 3 then spinAcc = spinAcc + PhysSpin * dt end
-    local targets = ObtenerObjetivosValidos()
-    if #targets == 0 then return end
+    local targets = ObtenerObjetivosValidos(); if #targets == 0 then return end
     local first = pickActiveTarget(targets)
     local firstHead = first and first.Character and (first.Character:FindFirstChild("Head") or first.Character:FindFirstChild("HumanoidRootPart"))
     local firstHrp = first and first.Character and first.Character:FindFirstChild("HumanoidRootPart")
     if not firstHead or not firstHrp then return end
 
-    -- Anti-Fling on Grab (Teo)
+    -- Auto Grab y Reset
     local welded = weldedPlayer()
+    if welded and ResetOnGrab then
+        local savePos = hrp.Position
+        hum.Health = 0 -- Forzar muerte
+        task.spawn(function()
+            LP.CharacterAdded:Wait()
+            task.wait(0.5)
+            local newHrp = LP.Character:WaitForChild("HumanoidRootPart", 5)
+            if newHrp then newHrp.CFrame = CFrame.new(savePos) end
+        end)
+        Notificar("AUTO GRAB", "Fuiste agarrado. Reseteando y regresando...", 3)
+        ResetOnGrab = false -- Desactivar temporalmente para evitar bucles
+        if ToggleRefs.ResetGrab then pcall(function() ToggleRefs.ResetGrab:Set(false, true) end) end
+        return
+    end
+
     if AntiFlingOnGrab and welded then
         if not grabActive then grabActive = true; grabDampUntil = os.clock() + GrabDamp end
         if os.clock() < grabDampUntil then
@@ -287,7 +281,6 @@ _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
         end
     else grabActive = false end
 
-    -- Stab on Grab (Teo) - solo strafe
     if mode == "strafe" and welded and StabOnGrab then
         if not strafeGrabCF then strafeGrabCF = hrp.CFrame end
         if WASDMoveEnabled then
@@ -329,13 +322,20 @@ _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     end
 
     if cf then
-        hrp.CFrame = cf + moveOffset
+        -- Aplicar velocidad (Lerp) si PhysSpeed < 10, si no, es instantáneo
+        if PhysSpeed >= 10 then
+            hrp.CFrame = cf + moveOffset
+        else
+            hrp.CFrame = hrp.CFrame:Lerp(cf + moveOffset, math.clamp(PhysSpeed * dt, 0, 1))
+        end
         if SyncMode then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; hum.MoveDirection = Vector3.zero end
     end
 end)
+
 -- ===== TABS =====
 local function safeTab(cfg) local ok, tab = pcall(function() return Window:Tab(cfg) end); if ok then return tab end; return nil end
 local AttackTab  = safeTab({Title="Target y Ataques", Icon="skull"})
+local ControlTab = safeTab({Title="CONTROL X/Y/Z",    Icon="target"})
 local PhysTab    = safeTab({Title="EDICIÓN FÍSICA",   Icon="activity"})
 local CheckTab   = safeTab({Title="CHECKPOINT",       Icon="map-pin"})
 local MobileTab  = safeTab({Title="MOBILE",           Icon="smartphone"})
@@ -350,8 +350,7 @@ local DropdownTargets = AttackTab:Dropdown({
     Title = "Fijar Objetivos (Multi)", Desc = "Selecciona jugadores.", Values = ObtenerJugadores(), Value = nil, AllowNone = true, Multi = true,
     Callback = function(val)
         if refrescandoLista then return end
-        if val == nil or (type(val) == "table" and #val == 0) then TargetNames = {}
-        else TargetNames = ExtraerNombresReales(val) end
+        if val == nil or (type(val) == "table" and #val == 0) then TargetNames = {} else TargetNames = ExtraerNombresReales(val) end
         currentTargetIndex = 1; activeTarget = nil; lastSwitchTime = 0
         if #TargetNames == 0 then Notificar("✅ Objetivos Limpios", "Sin objetivos.", 3)
         else local n = table.concat(TargetNames, ", "); if #n > 50 then n = string.sub(n,1,50).."..." end; Notificar("🎯 Objetivos ("..#TargetNames..")", n, 3) end
@@ -374,7 +373,7 @@ AttackTab:Input({ Title = "Tiempo entre targets (multi)", Placeholder = "9",
     Callback = function(t)
         local n = tonumber(t)
         if n and n > 0 then TargetSwitchInterval = n; lastSwitchTime = 1
-        elseif not t or t:match("^%s*$") then TargetSwitchInterval = 9.0; lastSwitchTime = 1 end
+        elseif not t or t:match("^%s*$") then TargetSwitchInterval = 9.0; lastSwitchTime = 1; Notificar("Reset", "Tiempo por defecto: 9", 3) end
     end })
 
 local function SincronizarDropdown()
@@ -405,10 +404,7 @@ task.spawn(function()
         table.sort(ks); local key = table.concat(ks, "\n")
         if _G.Fusion_AutoRefresh == autoRefreshToken and DropdownTargets and not DropdownTargets.Opened and key ~= lastListKey then
             lastListKey = key; refrescandoLista = true; ddRefresh(DropdownTargets, ObtenerJugadores())
-            task.wait(0.1); SincronizarDropdown(); refrescandoLista = false
-        end
-    end
-end)
+            task.wait(0.1); SincronizarDropdown(); refrescandoLista = false end end end)
 
 AttackTab:Button({Title="GOTO TARGET", Desc="Ir al primer objetivo",
     Callback=function()
@@ -419,13 +415,8 @@ AttackTab:Button({Title="GOTO TARGET", Desc="Ir al primer objetivo",
 ToggleRefs.ViewTarget = AttackTab:Toggle({Title="VIEW TARGET", Value=false,
     Callback=function(v)
         Toggles.ViewTarget = v; local tg = ObtenerObjetivosValidos()
-        if v and #tg > 0 and tg[1].Character then
-            local h = tg[1].Character:FindFirstChildOfClass("Humanoid")
-            if h then workspace.CurrentCamera.CameraSubject = h end
-        else
-            local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            if h then workspace.CurrentCamera.CameraSubject = h end
-        end
+        if v and #tg > 0 and tg[1].Character then local h = tg[1].Character:FindFirstChildOfClass("Humanoid"); if h then workspace.CurrentCamera.CameraSubject = h end
+        else local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid"); if h then workspace.CurrentCamera.CameraSubject = h end end
     end})
 
 AttackTab:Button({Title="OP MULTI FLING GUI 💀", Callback=function() pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/43xBcV1t"))() end) end})
@@ -443,11 +434,7 @@ AttackTab:Toggle({Title="WALKING FLING", Value=false,
                 pcall(function()
                     if not Toggles.WalkingFling then return end
                     for _, player in pairs(Players:GetPlayers()) do
-                        if player ~= lp and player.Character then
-                            for _, part in pairs(player.Character:GetDescendants()) do
-                                if part:IsA("BasePart") then part.CanCollide = false end
-                            end
-                        end
+                        if player ~= lp and player.Character then for _, part in pairs(player.Character:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end end
                     end
                     if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
                         local hrp = lp.Character.HumanoidRootPart; local strength = 100000; local oldV = hrp.Velocity
@@ -463,18 +450,25 @@ AttackTab:Toggle({Title="WALKING FLING", Value=false,
         end
     end})
 
--- ===== EDICIÓN FÍSICA (CONSOLIDADA) =====
-PhysTab:Input({Title="X (lateral)", Desc="Desplazamiento lateral. Default: 0", Placeholder="0", Callback=function(v) OffsetX = tonumber(v) or 0 end})
-PhysTab:Input({Title="Y (altura)",  Desc="Altura respecto al objetivo. Default: 2", Placeholder="2", Callback=function(v) OffsetY = tonumber(v) or 2 end})
-PhysTab:Input({Title="Z (detrás)",  Desc="Distancia detrás. Default: 0", Placeholder="0", Callback=function(v) OffsetZ = tonumber(v) or 0 end})
-PhysTab:Input({Title="Pitch", Desc="Inclinación. Default: -90", Placeholder="-90", Callback=function(v) PhysPitch = tonumber(v) or -90 end})
-PhysTab:Input({Title="Roll",  Desc="Ladeo. Default: 0", Placeholder="0", Callback=function(v) PhysRoll = tonumber(v) or 0 end})
-PhysTab:Input({Title="Spin Speed", Desc="Solo si Yaw=SPIN. Default: 60", Placeholder="60", Callback=function(v) PhysSpin = tonumber(v) or 60 end})
-PhysTab:Input({Title="Orbit Speed", Desc="Velocidad de órbita. Default: 2", Placeholder="2", Callback=function(v) local n = tonumber(v); if n then OrbitSpeed = n end end})
-PhysTab:Input({Title="Strafe Speed (WASD)", Desc="Velocidad de desplazamiento. Default: 22", Placeholder="22", Callback=function(v) StrafeSpeed = tonumber(v) or 22 end})
-PhysTab:Input({Title="Bang Shake", Desc="Intensidad de vibración. Default: 1", Placeholder="1", Callback=function(v) BangSpeed = tonumber(v) or 1 end})
-PhysTab:Input({Title="Max Grab Speed", Desc="Tope de velocidad al agarrar. Default: 35", Placeholder="35", Callback=function(v) MaxGrabSpeed = tonumber(v) or 35 end})
-PhysTab:Input({Title="Grab Damp", Desc="Segundos de freeze inicial. Default: 0.15", Placeholder="0.15", Callback=function(v) GrabDamp = tonumber(v) or 0.15 end})
+-- ===== CONTROL X/Y/Z (ESTÉTICA RESTAURADA) =====
+ControlTab:Input({ Title = "X (lateral)", Placeholder = "0", Callback = function(v) OffsetX = tonumber(v) or 0; if v == "" then Notificar("Reset X", "Default: 0", 3) end end })
+ControlTab:Input({ Title = "Y (altura)", Placeholder = "0", Callback = function(v) OffsetY = tonumber(v) or 0; if v == "" then Notificar("Reset Y", "Default: 0", 3) end end })
+ControlTab:Input({ Title = "Z (distancia / radio de órbita)", Placeholder = "1.1", Callback = function(v) OffsetZ = tonumber(v) or 1.1; if v == "" then Notificar("Reset Z", "Default: 1.1", 3) end end })
+ControlTab:Input({ Title = "Velocidad de rotación", Placeholder = "2", Callback = function(v) local n = tonumber(v); if n then OrbitSpeed = n elseif not v or v:match("^%s*$") then OrbitSpeed = 2.0; Notificar("Reset Speed", "Default: 2", 3) end end })
+ControlTab:Toggle({ Title = "Bang Shake (Animación)", Desc = "Vibración al hacer Bang antiguo.", Value = false, Callback = function(v) BangShakeEnabled = v end })
+
+-- ===== EDICIÓN FÍSICA (NUEVO) =====
+PhysTab:Input({Title="Speed (Pegado)", Desc="Velocidad a la que te pegas (10 = instantáneo). Default: 10", Placeholder="10", Callback=function(v) 
+    local n = tonumber(v)
+    if n and n > 0 then PhysSpeed = n
+    elseif v == "" then PhysSpeed = 10; Notificar("Reset Speed", "Default: 10", 3) end
+end})
+PhysTab:Input({Title="Pitch", Desc="Inclinación. Default: -90", Placeholder="-90", Callback=function(v) PhysPitch = tonumber(v) or -90; if v == "" then Notificar("Reset Pitch", "Default: -90", 3) end end})
+PhysTab:Input({Title="Roll",  Desc="Ladeo. Default: 0", Placeholder="0", Callback=function(v) PhysRoll = tonumber(v) or 0; if v == "" then Notificar("Reset Roll", "Default: 0", 3) end end})
+PhysTab:Input({Title="Spin Speed", Desc="Solo si Yaw=SPIN. Default: 60", Placeholder="60", Callback=function(v) PhysSpin = tonumber(v) or 60; if v == "" then Notificar("Reset Spin", "Default: 60", 3) end end})
+PhysTab:Input({Title="Strafe Speed (WASD)", Desc="Velocidad de desplazamiento. Default: 22", Placeholder="22", Callback=function(v) StrafeSpeed = tonumber(v) or 22; if v == "" then Notificar("Reset Strafe", "Default: 22", 3) end end})
+PhysTab:Input({Title="Max Grab Speed", Desc="Tope de velocidad al agarrar. Default: 35", Placeholder="35", Callback=function(v) MaxGrabSpeed = tonumber(v) or 35; if v == "" then Notificar("Reset MaxGrab", "Default: 35", 3) end end})
+PhysTab:Input({Title="Grab Damp", Desc="Segundos de freeze inicial. Default: 0.15", Placeholder="0.15", Callback=function(v) GrabDamp = tonumber(v) or 0.15; if v == "" then Notificar("Reset Damp", "Default: 0.15", 3) end end})
 
 PhysTab:Toggle({Title="Bang Shake (activo)", Value=false, Callback=function(v) BangShakeEnabled = v end})
 PhysTab:Toggle({Title="Sync (no anchored)", Desc="Teo default. Al apagar, ancla el HRP", Value=true, Callback=function(v) SyncMode = v end})
@@ -489,77 +483,45 @@ PhysTab:Button({Title="Cambiar Yaw Mode", Desc="TARGET -> FREE -> SPIN",
 PhysTab:Button({Title="Flip Pitch", Desc="Invierte la inclinación",
     Callback=function() PhysPitch = -PhysPitch; Notificar("Pitch", tostring(PhysPitch), 3) end})
 PhysTab:Button({Title="Cambiar Pose", Desc="Prone, Face-up, Sit, Side",
-    Callback=function()
-        PoseIdx = PoseIdx % #POSES + 1; local p = POSES[PoseIdx]
-        PhysPitch = p.p; PhysRoll = p.r; Notificar("Pose", "Cambiada", 3)
-    end})
+    Callback=function() PoseIdx = PoseIdx % #POSES + 1; local p = POSES[PoseIdx]; PhysPitch = p.p; PhysRoll = p.r; Notificar("Pose", "Cambiada", 3) end})
 PhysTab:Button({Title="RESET", Color=Color3.fromRGB(180,40,40), Callback=function()
     OffsetX, OffsetY, OffsetZ = 0, 2, 0
     PhysPitch, PhysRoll = -90, 0
-    OrbitSpeed = 2.0; BangSpeed = 1; StrafeSpeed = 22
+    OrbitSpeed = 2.0; BangSpeed = 1; StrafeSpeed = 22; PhysSpeed = 10
     frozenCF = nil; moveOffset = Vector3.zero; strafeGrabCF = nil
     Notificar("RESET", "Todo a default", 3)
 end})
+
 -- ===== CHECKPOINT =====
 local function forceReset()
-    if LP.Character then
-        local h = LP.Character:FindFirstChildOfClass("Humanoid")
-        if h then h.Health = 0; pcall(function() h:ChangeState(Enum.HumanoidStateType.Dead) end) end
-        pcall(function() LP.Character:BreakJoints() end)
-    end
+    if LP.Character then local h = LP.Character:FindFirstChildOfClass("Humanoid"); if h then h.Health = 0; pcall(function() h:ChangeState(Enum.HumanoidStateType.Dead) end) end; pcall(function() LP.Character:BreakJoints() end) end
 end
 local function handleAutoReset()
     if not autoResetEnabled or autoResetInterval <= 0 then return end
-    local char = LP.Character
-    if char then
-        local h = char:FindFirstChildOfClass("Humanoid")
-        if h and h.Health > 0 and tick() - lastResetTime >= autoResetInterval then
-            forceReset(); lastResetTime = tick()
-        end
-    end
+    local char = LP.Character; if char then local h = char:FindFirstChildOfClass("Humanoid"); if h and h.Health > 0 and tick() - lastResetTime >= autoResetInterval then forceReset(); lastResetTime = tick() end end
 end
 _G.Fusion_FarmLoop = RunService.Heartbeat:Connect(handleAutoReset)
 _G.Fusion_SpawnConn = LP.CharacterAdded:Connect(function(char)
     lastResetTime = tick()
-    if SavedCheckpoint then
-        local root = char:WaitForChild("HumanoidRootPart", 5)
-        if root then task.wait(0.2); root.CFrame = CFrame.new(SavedCheckpoint) end
-    end
+    if SavedCheckpoint then local root = char:WaitForChild("HumanoidRootPart", 5); if root then task.wait(0.2); root.CFrame = CFrame.new(SavedCheckpoint) end end
     if currentMode then currentMode = nil end
 end)
 
 if CheckTab then
     CheckTab:Toggle({Title="Activar Auto Reset",Desc="te matas automáticamente",Value=false, Callback=function(s) autoResetEnabled = s; if s then lastResetTime = tick() end end})
-    CheckTab:Input({Title="Tiempo Auto Reset",Placeholder="30", Callback=function(t) local n=tonumber(t); if n and n>0 then autoResetInterval=n elseif not t or t:match("^%s*$") then autoResetInterval=30 end end})
+    CheckTab:Input({Title="Tiempo Auto Reset",Placeholder="30", Callback=function(t) local n=tonumber(t); if n and n>0 then autoResetInterval=n elseif not t or t:match("^%s*$") then autoResetInterval=30; Notificar("Reset Time", "Default: 30", 3) end end})
     CheckTab:Button({Title="💀 Forzar Reset Ahora",Color=Color3.fromRGB(180,40,40),Callback=function() forceReset() end})
-    CheckTab:Button({Title="📍 guarda Checkpoint",Desc="esto modificar el punto de aparición como si fuera tu camita de Minecraft lo guarda y cuando mueres apareces en dónde asignaste y guarda tu punto de aparición", Callback=function()
-        local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        if r then SavedCheckpoint = r.Position; Notificar("Checkpoint", "Guardado.", 3) end
-    end})
+    CheckTab:Button({Title="📍 guarda Checkpoint",Desc="guarda tu punto de aparición como camita de Minecraft", Callback=function() local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart"); if r then SavedCheckpoint = r.Position; Notificar("Checkpoint", "Guardado.", 3) end end})
     CheckTab:Button({Title="🗑️ Clear Checkpoint",Desc="borra el punto de aparición", Callback=function() SavedCheckpoint = nil; Notificar("Checkpoint", "Eliminado.", 3) end})
-    CheckTab:Button({Title="⚠️🔵 Modo Auto Farm AFK 🔵⚠️",Desc="⚠️ ADVERTENCIA ESTO SOLO ES PARA FARMEAR NO PIQUE ESTA FUNCION A MENOS QUE QUIERAS GANAR KILL CON TU CUENTA SECUNDARIA SOLO SIRVE PARA GANAR KILL EN RP 2 PLAYERS⚠️👻",Callback=function()
-        Notificar("AFK", "Iniciando Auto Farm...", 3)
-        pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/wyMSZ29R"))() end)
-    end})
+    CheckTab:Button({Title="⚠️🔵 Modo Auto Farm AFK 🔵⚠️",Desc="⚠️ SOLO PARA FARMEAR",Callback=function() Notificar("AFK", "Iniciando Auto Farm...", 3); pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/wyMSZ29R"))() end) end})
 end
+
 -- ===== MOBILE =====
-local MobileOpts = {
-    {"STRAFE","Strafe","STRAFE"}, {"BANG","Bang","BANG"}, {"ORBIT","Orbit","ORBIT"},
-    {"HEADSIT","Headsit","HEAD"}, {"VIEW TARGET","ViewTarget","VIEW"}
-}
+local MobileOpts = { {"STRAFE","Strafe","STRAFE"}, {"BANG","Bang","BANG"}, {"ORBIT","Orbit","ORBIT"}, {"HEADSIT","Headsit","HEAD"}, {"VIEW TARGET","ViewTarget","VIEW"} }
 local function mobileKeys() local k = {}; for _, o in ipairs(MobileOpts) do if MobileSel[o[2]] then table.insert(k, o) end end; return k end
 local function mobileAnyOn() for _, o in ipairs(mobileKeys()) do if Toggles[o[2]] then return true end end; return false end
-local function refreshMobileButton()
-    if not mobileButton then return end
-    local sel, on = mobileKeys(), mobileAnyOn()
-    local name = #sel == 1 and sel[1][3] or (#sel == 0 and "NADA" or "MULTI")
-    mobileButton.Text = name .. (on and "\nON" or "\nOFF")
-    mobileButton.BackgroundColor3 = on and Color3.fromRGB(37,122,247) or Color3.fromRGB(100,100,100)
-end
-local function setLogic(key, v)
-    local ref = ToggleRefs[key]; local ok = ref and pcall(function() ref:Set(v, true) end)
-    if not ok and (key == "Strafe" or key == "Bang" or key == "Orbit" or key == "Headsit") then Toggles[key] = v; lastSwitchTime = 0 end
-end
+local function refreshMobileButton() if not mobileButton then return end; local sel, on = mobileKeys(), mobileAnyOn(); local name = #sel == 1 and sel[1][3] or (#sel == 0 and "NADA" or "MULTI"); mobileButton.Text = name .. (on and "\nON" or "\nOFF"); mobileButton.BackgroundColor3 = on and Color3.fromRGB(37,122,247) or Color3.fromRGB(100,100,100) end
+local function setLogic(key, v) local ref = ToggleRefs[key]; local ok = ref and pcall(function() ref:Set(v, true) end); if not ok and (key == "Strafe" or key == "Bang" or key == "Orbit" or key == "Headsit") then Toggles[key] = v; lastSwitchTime = 0 end end
 local function createMobileButton()
     if _G.Fusion_MobileGui then return end
     local gui = Instance.new("ScreenGui"); gui.Name = "FusionMobileButton"; gui.Parent = LP:WaitForChild("PlayerGui"); gui.ResetOnSpawn = false; gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; gui.DisplayOrder = 100; _G.Fusion_MobileGui = gui
@@ -570,24 +532,13 @@ local function createMobileButton()
     mobileButton.MouseButton1Click:Connect(function()
         if pressPos and mobileButton.Position ~= pressPos then return end
         local sel = mobileKeys(); if #sel == 0 then Notificar("BOTÓN", "Elige una lógica en MOBILE.", 2); return end
-        local nv = not mobileAnyOn(); for _, o in ipairs(sel) do setLogic(o[2], nv) end; refreshMobileButton()
-        Notificar(#sel == 1 and sel[1][3] or "MULTI", nv and "Activado" or "Desactivado", 2)
+        local nv = not mobileAnyOn(); for _, o in ipairs(sel) do setLogic(o[2], nv) end; refreshMobileButton(); Notificar(#sel == 1 and sel[1][3] or "MULTI", nv and "Activado" or "Desactivado", 2)
     end)
     task.spawn(function() while gui.Parent do refreshMobileButton(); task.wait(0.25) end end)
     local dragging, dragInput, dragStart, startPos
-    mobileButton.InputBegan:Connect(function(input)
-        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and mobileButtonDragEnabled then
-            dragging = true; dragStart = input.Position; startPos = mobileButton.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-        end
-    end)
+    mobileButton.InputBegan:Connect(function(input) if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and mobileButtonDragEnabled then dragging = true; dragStart = input.Position; startPos = mobileButton.Position; input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end)
     mobileButton.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging and mobileButtonDragEnabled then
-            local d = input.Position - dragStart
-            mobileButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
-        end
-    end)
+    UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging and mobileButtonDragEnabled then local d = input.Position - dragStart; mobileButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
 end
 local function destroyMobileButton() if _G.Fusion_MobileGui then _G.Fusion_MobileGui:Destroy(); _G.Fusion_MobileGui = nil; mobileButton = nil end end
 
@@ -597,10 +548,7 @@ if MobileTab then
     MobileTab:Dropdown({Title="Lógicas del botón",Desc="elige cuáles enciende y apaga", Values={"STRAFE","BANG","ORBIT","HEADSIT","VIEW TARGET"}, Value={"BANG"}, AllowNone=true, Multi=true,
         Callback=function(val)
             local nueva = {}; local list = type(val) == "table" and val or {val}
-            for _, n in ipairs(list) do
-                if type(n) == "table" then n = n.Title end
-                for _, o in ipairs(MobileOpts) do if o[1] == n then nueva[o[2]] = true end end
-            end
+            for _, n in ipairs(list) do if type(n) == "table" then n = n.Title end; for _, o in ipairs(MobileOpts) do if o[1] == n then nueva[o[2]] = true end end end
             for k in pairs(MobileSel) do if not nueva[k] and Toggles[k] then setLogic(k, false) end end
             MobileSel = nueva; refreshMobileButton()
         end})
@@ -609,35 +557,21 @@ end
 -- ===== DEFENCE =====
 if DefenceTab then
     DefenceTab:Button({Title="CHOCO EDITION SPAM 👑",Desc="solo sirve para spam de chat", Callback=function() pcall(function() loadstring(game:HttpGet(("https://gist.githubusercontent.com/TOXIC-8535/3fb7f2ed806ebe14d31ec8fa87abdf6a/raw/2e5c81dda577d72b2b2b9e00b43477b784a742e0/Choco%2520edition%2520spammer"),true))() end) end})
+    
+    -- Nuevo Toggle para Reset on Grab
+    ToggleRefs.ResetGrab = DefenceTab:Toggle({Title="Reset on Grab", Desc="Al ser agarrado, resetea y vuelve a tu posición", Value=false, Callback=function(v) ResetOnGrab = v end})
+
     local SafeSpotGui, SafeSpotBaseplate, teleported, originalPosition = nil,nil,false,nil
     local function destroySafeSpot()
-        if teleported and originalPosition and LP.Character then
-            local hrp = LP.Character:FindFirstChild("HumanoidRootPart"); if hrp then hrp.CFrame = CFrame.new(originalPosition) end
-        end
-        teleported = false
-        if SafeSpotGui then SafeSpotGui:Destroy(); SafeSpotGui = nil end
-        if SafeSpotBaseplate then SafeSpotBaseplate:Destroy(); SafeSpotBaseplate = nil end
+        if teleported and originalPosition and LP.Character then local hrp = LP.Character:FindFirstChild("HumanoidRootPart"); if hrp then hrp.CFrame = CFrame.new(originalPosition) end end
+        teleported = false; if SafeSpotGui then SafeSpotGui:Destroy(); SafeSpotGui = nil end; if SafeSpotBaseplate then SafeSpotBaseplate:Destroy(); SafeSpotBaseplate = nil end
     end
     _G.Fusion_SafeSpotCleanup = destroySafeSpot
     local function makeDraggable(btn)
         local dragging, dragInput, dragStart, startPos, pressPos, conn
-        btn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                pressPos = btn.Position
-                if mobileButtonDragEnabled then
-                    dragging = true; dragStart = input.Position; startPos = btn.Position
-                    input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-                end
-            end
-        end)
+        btn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then pressPos = btn.Position; if mobileButtonDragEnabled then dragging = true; dragStart = input.Position; startPos = btn.Position; input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end end)
         btn.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
-        conn = UserInputService.InputChanged:Connect(function(input)
-            if not btn.Parent then conn:Disconnect(); return end
-            if input == dragInput and dragging and mobileButtonDragEnabled then
-                local d = input.Position - dragStart
-                btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
-            end
-        end)
+        conn = UserInputService.InputChanged:Connect(function(input) if not btn.Parent then conn:Disconnect(); return end; if input == dragInput and dragging and mobileButtonDragEnabled then local d = input.Position - dragStart; btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
         return function() return pressPos ~= nil and btn.Position ~= pressPos end
     end
     DefenceTab:Toggle({Title="Safe Spot",Desc="lugar seguro",Value=false,
@@ -646,71 +580,31 @@ if DefenceTab then
             if SafeSpotGui then return end
             local tp = Vector3.new(999,999,999)
             SafeSpotBaseplate = Instance.new("Part"); SafeSpotBaseplate.Size = Vector3.new(100,1,100); SafeSpotBaseplate.Position = tp - Vector3.new(0,5,0); SafeSpotBaseplate.Anchored = true; SafeSpotBaseplate.BrickColor = BrickColor.new("Earth green"); SafeSpotBaseplate.Parent = workspace
-            local pg = LP:WaitForChild("PlayerGui")
-            SafeSpotGui = Instance.new("ScreenGui"); SafeSpotGui.Name = "TeleportGui"; SafeSpotGui.ResetOnSpawn = false; SafeSpotGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; SafeSpotGui.DisplayOrder = 100; SafeSpotGui.Parent = pg
+            local pg = LP:WaitForChild("PlayerGui"); SafeSpotGui = Instance.new("ScreenGui"); SafeSpotGui.Name = "TeleportGui"; SafeSpotGui.ResetOnSpawn = false; SafeSpotGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; SafeSpotGui.DisplayOrder = 100; SafeSpotGui.Parent = pg
             local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0,60,0,45); btn.Position = UDim2.fromScale(0.66, 0.5); btn.BackgroundColor3 = Color3.fromRGB(100,100,100); btn.BackgroundTransparency = 0.4; btn.Text = "SAFE\nTP"; btn.TextColor3 = Color3.new(1,1,1); btn.Font = Enum.Font.GothamBold; btn.TextSize = 12; btn.AutoButtonColor = false; btn.Parent = SafeSpotGui
             local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0,8); c.Parent = btn
             local isDragged = makeDraggable(btn)
             btn.MouseButton1Click:Connect(function()
                 if isDragged() then return end
                 local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart"); if not hrp then return end
-                if not teleported then
-                    originalPosition = hrp.Position; hrp.CFrame = CFrame.new(tp); teleported = true
-                    btn.BackgroundColor3 = Color3.fromRGB(37,122,247); btn.Text = "SAFE\nBACK"
-                else
-                    if originalPosition then hrp.CFrame = CFrame.new(originalPosition) end
-                    teleported = false; btn.BackgroundColor3 = Color3.fromRGB(100,100,100); btn.Text = "SAFE\nTP"
-                end
-            end)
-        end})
+                if not teleported then originalPosition = hrp.Position; hrp.CFrame = CFrame.new(tp); teleported = true; btn.BackgroundColor3 = Color3.fromRGB(37,122,247); btn.Text = "SAFE\nBACK"
+                else if originalPosition then hrp.CFrame = CFrame.new(originalPosition) end; teleported = false; btn.BackgroundColor3 = Color3.fromRGB(100,100,100); btn.Text = "SAFE\nTP" end end) end})
     DefenceTab:Toggle({Title="Anti Void",Desc="evita morir por vacío",Value=false,
-        Callback=function(v)
-            Toggles.AntiVoid = v
-            task.spawn(function()
-                while Toggles.AntiVoid and task.wait() do
-                    pcall(function()
-                        local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                        if hrp and hrp.Position.Y < -15 then
-                            hrp.AssemblyLinearVelocity = Vector3.zero; hrp.CFrame = CFrame.new(hrp.Position.X, 50, hrp.Position.Z)
-                        end
-                    end)
-                end
-            end)
+        Callback=function(v) Toggles.AntiVoid = v
+            task.spawn(function() while Toggles.AntiVoid and task.wait() do pcall(function() local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart"); if hrp and hrp.Position.Y < -15 then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.CFrame = CFrame.new(hrp.Position.X, 50, hrp.Position.Z) end end) end end)
         end})
     DefenceTab:Toggle({Title="Anti Bang V1",Desc="empuja a los que se acercan",Value=false,
-        Callback=function(v)
-            Toggles.AntiBangV1 = v
-            task.spawn(function()
-                while Toggles.AntiBangV1 do
-                    task.wait(0.1)
-                    pcall(function()
-                        local char = LP.Character
-                        if char and char:FindFirstChild("HumanoidRootPart") then
-                            for _, op in pairs(Players:GetPlayers()) do
-                                if op ~= LP and op.Character and op.Character:FindFirstChild("HumanoidRootPart") then
-                                    local mp = char.HumanoidRootPart.Position
-                                    local op2 = op.Character.HumanoidRootPart.Position
-                                    if (mp-op2).Magnitude < 3.5 then
-                                        local dir = (mp-op2).Unit
-                                        char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + Vector3.new(dir.X*20, 0, dir.Z*20)
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                end
-            end)
+        Callback=function(v) Toggles.AntiBangV1 = v
+            task.spawn(function() while Toggles.AntiBangV1 do task.wait(0.1); pcall(function() local char = LP.Character; if char and char:FindFirstChild("HumanoidRootPart") then for _, op in pairs(Players:GetPlayers()) do if op ~= LP and op.Character and op.Character:FindFirstChild("HumanoidRootPart") then local mp = char.HumanoidRootPart.Position; local op2 = op.Character.HumanoidRootPart.Position; if (mp-op2).Magnitude < 3.5 then local dir = (mp-op2).Unit; char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + Vector3.new(dir.X*20, 0, dir.Z*20) end end end end end) end end)
         end})
     DefenceTab:Toggle({Title="Anti Bang V2 (TP)",Desc="teletransporte corto para evitar bang",Value=false,
-        Callback=function(v)
-            Toggles.AntiBangV2 = v; if not v then return end
+        Callback=function(v) Toggles.AntiBangV2 = v; if not v then return end
             local RS = game:GetService("RunService"); local cam = workspace.CurrentCamera; local acc, conn = 0, nil
             conn = RS.Heartbeat:Connect(function(dt)
                 if not Toggles.AntiBangV2 then if conn then conn:Disconnect() end; return end
                 local char = LP.Character; local hrp = char and char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
                 acc = acc + dt; if acc < 0.16 then return end; acc = 0
-                local base = hrp.CFrame
-                local savedType = cam.CameraType; local savedSubj = cam.CameraSubject; local savedCamCF = cam.CFrame
+                local base = hrp.CFrame; local savedType = cam.CameraType; local savedSubj = cam.CameraSubject; local savedCamCF = cam.CFrame
                 cam.CameraType = Enum.CameraType.Scriptable; cam.CFrame = savedCamCF
                 pcall(function() hrp.CFrame = base * CFrame.new(0,666,0); hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero end)
                 task.delay(0.1, function()
@@ -721,53 +615,26 @@ if DefenceTab then
             end)
         end})
     DefenceTab:Toggle({Title="Anti Fling",Desc="evita salir disparado",Value=false,
-        Callback=function(v)
-            Toggles.AntiFling = v
+        Callback=function(v) Toggles.AntiFling = v
             if v then
                 AntiFlingConnection = RunService.Stepped:Connect(function()
-                    pcall(function()
-                        for _, pl in pairs(Players:GetPlayers()) do
-                            if pl ~= LP and pl.Character then
-                                local hrp = pl.Character:FindFirstChild("HumanoidRootPart")
-                                if hrp and not hrp.Anchored then
-                                    hrp.CustomPhysicalProperties = PhysicalProperties.new(0,0,0,0,0)
-                                    hrp.CanCollide = false
-                                    if hrp.AssemblyLinearVelocity.Magnitude > 100 or hrp.AssemblyAngularVelocity.Magnitude > 100 then
-                                        hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero
-                                    end
-                                end
-                            end
-                        end
-                    end)
+                    pcall(function() for _, pl in pairs(Players:GetPlayers()) do if pl ~= LP and pl.Character then local hrp = pl.Character:FindFirstChild("HumanoidRootPart"); if hrp and not hrp.Anchored then hrp.CustomPhysicalProperties = PhysicalProperties.new(0,0,0,0,0); hrp.CanCollide = false; if hrp.AssemblyLinearVelocity.Magnitude > 100 or hrp.AssemblyAngularVelocity.Magnitude > 100 then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero end end end end end)
                 end)
                 _G.Fusion_AntiFling = AntiFlingConnection
-            else
-                if AntiFlingConnection then AntiFlingConnection:Disconnect(); AntiFlingConnection = nil; _G.Fusion_AntiFling = nil end
-            end
+            else if AntiFlingConnection then AntiFlingConnection:Disconnect(); AntiFlingConnection = nil; _G.Fusion_AntiFling = nil end end
         end})
     local inmortalBusy = false
     DefenceTab:Button({Title="Inmortalidad", Callback=function()
         if inmortalBusy then return end; inmortalBusy = true
-        local RS = game:GetService("ReplicatedStorage"); local LocalPlayer = Players.LocalPlayer
-        local VOID_Y = -300; local DURACION = 9
+        local RS = game:GetService("ReplicatedStorage"); local LocalPlayer = Players.LocalPlayer; local VOID_Y = -300; local DURACION = 9
         task.spawn(function()
             local inicio = os.clock()
             while os.clock() - inicio < DURACION do
-                local ok, err = pcall(function()
-                    local char = LocalPlayer.Character; local root = char and char:FindFirstChild("HumanoidRootPart")
-                    if not root or root.Position.Y > VOID_Y then return end
+                local ok, err = pcall(function() local char = LocalPlayer.Character; local root = char and char:FindFirstChild("HumanoidRootPart"); if not root or root.Position.Y > VOID_Y then return end
                     local best, bestDist
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        local r = p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-                        if r and r.Position.Y > VOID_Y then
-                            local d = (Vector2.new(r.Position.X, r.Position.Z) - Vector2.new(root.Position.X, root.Position.Z)).Magnitude
-                            if not bestDist or d < bestDist then best, bestDist = r, d end
-                        end
-                    end
-                    if best then root.AssemblyLinearVelocity = Vector3.zero; root.CFrame = best.CFrame * CFrame.new(0, 3, 0); task.wait(1) end
-                end)
-                if not ok then warn("Error vigilante:", err) end
-                task.wait(0.1)
+                    for _, p in ipairs(Players:GetPlayers()) do local r = p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart"); if r and r.Position.Y > VOID_Y then local d = (Vector2.new(r.Position.X, r.Position.Z) - Vector2.new(root.Position.X, root.Position.Z)).Magnitude; if not bestDist or d < bestDist then best, bestDist = r, d end end end
+                    if best then root.AssemblyLinearVelocity = Vector3.zero; root.CFrame = best.CFrame * CFrame.new(0, 3, 0); task.wait(1) end end)
+                if not ok then warn("Error vigilante:", err) end; task.wait(0.1)
             end
             inmortalBusy = false
         end)
@@ -776,34 +643,26 @@ if DefenceTab then
             pcall(function() RS.Remotes.ResetOutfit:FireServer() end); task.wait(1)
             pcall(function() RS.Remotes.ResetOutfit:FireServer() end); task.wait(0.1)
             pcall(function() RS.Remotes.ResetOutfit:FireServer() end); task.wait(0.1)
-            local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-            local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+            local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait(); local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
             for _ = 1, 3 do HumanoidRootPart.CFrame = CFrame.new(-1838, 86, -182) end
         end)
     end})
 end
 
 -- ===== NOTIFICACIÓN + LIMPIEZA =====
-WindUI:Notify({Title = "ULTRA FUSION 👑", Content = "V9 - Strafe Teo + X/Y/Z unificados", Duration = 6})
+Window:Notify({Title = "FUSION CF 👑", Content = "V10 - Strafe + Grab Reset", Duration = 6})
 task.spawn(function()
     task.wait(2)
     local ui = (typeof(gethui) == "function" and gethui()) or CoreGui or LP:WaitForChild("PlayerGui")
     local mainGui = nil
     for _, obj in ipairs(ui:GetDescendants()) do
-        if obj:IsA("TextLabel") and obj.Text == "ULTRA FUSION" then
-            mainGui = obj:FindFirstAncestorWhichIsA("ScreenGui"); break
-        end
+        if obj:IsA("TextLabel") and (obj.Text == "FUSION X CF" or obj.Text == "FUSION CF") then mainGui = obj:FindFirstAncestorWhichIsA("ScreenGui"); break end
     end
     if mainGui then
         mainGui.Destroying:Connect(function()
-            FullDestruction(); _G.ToxicFusion_Window = nil
-            if _G.ToxicFusion_CurrentGui == mainGui then _G.ToxicFusion_CurrentGui = nil end
-            pcall(function()
-                if LP and LP.Character then
-                    local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-                    if hum then hum.WalkSpeed = 16; hum.PlatformStand = false; workspace.CurrentCamera.CameraSubject = hum end
-                end
-            end)
+            FullDestruction(); _G.Fusion_Window = nil
+            if _G.Fusion_CurrentGui == mainGui then _G.Fusion_CurrentGui = nil end
+            pcall(function() if LP and LP.Character then local hum = LP.Character:FindFirstChildOfClass("Humanoid"); if hum then hum.WalkSpeed = 16; hum.PlatformStand = false; workspace.CurrentCamera.CameraSubject = hum end end end)
         end)
     end
 end)

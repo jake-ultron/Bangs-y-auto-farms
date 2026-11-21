@@ -1,4 +1,4 @@
---// FUSION 👑 x FAMILY CF — V12 (OPTIMIZADO)
+--// FUSION 👑 x FAMILY CF — V13 (FINAL)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -54,7 +54,7 @@ local BangSpeed = 1; local BangShakeEnabled = false
 local OrbitSpeed = 2.0; local orbitAngle = 0
 local StrafeSpeed = 22; local PhysSpeed = 10
 local WASDMoveEnabled = false; local moveOffset = Vector3.zero
-local HoldMode = false; local frozenCF = nil
+local SyncMode = true; local HoldMode = false; local frozenCF = nil
 local AntiFlingOnGrab = true; local MaxGrabSpeed = 35; local GrabDamp = 0.15
 local StabOnGrab = true; local ResetOnGrab = false; local ResetGrabTime = 2.0
 local grabActive = false; local grabDampUntil = 0
@@ -153,7 +153,7 @@ local function strafeEnable()
     local char = LP.Character; local hum = char and char:FindFirstChildOfClass("Humanoid"); local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp then return end
     freeYaw = math.rad(hrp.Orientation.Y); strafeState = { anchored = hrp.Anchored, platform = hum.PlatformStand, autorotate = hum.AutoRotate }
-    hum.PlatformStand = true; hum.AutoRotate = false
+    hum.PlatformStand = true; hum.AutoRotate = false; if not SyncMode then hrp.Anchored = true end
     pcall(function() for _, tr in ipairs(hum:GetPlayingAnimationTracks()) do tr:Stop() end end)
     moveOffset = Vector3.zero; frozenCF = nil; strafeGrabCF = nil
 end
@@ -163,7 +163,7 @@ local function strafeDisable()
     strafeState = nil; frozenCF = nil; strafeGrabCF = nil; moveOffset = Vector3.zero
 end
 
--- ===== LOOP MAESTRO (RenderStepped para fluidez visual) =====
+-- ===== LOOP MAESTRO (RenderStepped) =====
 _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     if isDead then return end
     local char = LP.Character; if not char then return end
@@ -175,9 +175,10 @@ _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     if mode ~= currentMode then if mode then strafeEnable() else strafeDisable() end; currentMode = mode end
     if not mode then return end
     if not hum.PlatformStand then hum.PlatformStand = true; hum.AutoRotate = false end
+    if SyncMode and hrp.Anchored then hrp.Anchored = false end
+    if not SyncMode and not hrp.Anchored then hrp.Anchored = true end
     
     if PhysYawMode == 3 then spinAcc = spinAcc + PhysSpin * dt end
-    
     local targets = ObtenerObjetivosValidos(); if #targets == 0 then return end
     local first = pickActiveTarget(targets)
     local firstHead = first and first.Character and (first.Character:FindFirstChild("Head") or first.Character:FindFirstChild("HumanoidRootPart"))
@@ -210,7 +211,9 @@ _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     if mode == "strafe" and welded and StabOnGrab then
         if not strafeGrabCF then strafeGrabCF = hrp.CFrame end
         if WASDMoveEnabled then local dir = wasdDir(); if dir.Magnitude > 0.01 then strafeGrabCF = CFrame.new(strafeGrabCF.Position + dir.Unit * StrafeSpeed * dt) * strafeGrabCF.Rotation end end
-        hrp.CFrame = strafeGrabCF; if HoldMode then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; hum.MoveDirection = Vector3.zero end; return
+        hrp.CFrame = strafeGrabCF
+        if SyncMode then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; hum.MoveDirection = Vector3.zero end
+        return
     end
     strafeGrabCF = nil
     
@@ -236,10 +239,9 @@ _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     end
     
     if cf then
-        -- Ajuste de fluidez visual
         if PhysSpeed >= 10 then hrp.CFrame = cf + moveOffset
         else hrp.CFrame = hrp.CFrame:Lerp(cf + moveOffset, math.clamp(PhysSpeed * dt, 0, 1)) end
-        if HoldMode then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; hum.MoveDirection = Vector3.zero end
+        if SyncMode then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; hum.MoveDirection = Vector3.zero end
     end
 end)
 
@@ -311,7 +313,8 @@ PhysTab:Input({Title="Grab Damp", Desc="Segundos de freeze inicial. Default: 0.1
 PhysTab:Input({Title="SPEED (Shake)", Desc="Velocidad de vibración. Default: 1", Placeholder="1", Callback=function(v) BangSpeed = tonumber(v) or 1; if v == "" then Notificar("Reset Shake", "Default: 1", 3) end end})
 PhysTab:Input({Title="Reset Grab Time", Desc="Segundos de espera antes de volver al ser agarrado. Default: 2", Placeholder="2", Callback=function(v) ResetGrabTime = tonumber(v) or 2; if v == "" then Notificar("Reset Grab", "Default: 2s", 3) end end})
 
-PhysTab:Toggle({Title="HOLD / SYNC", Desc="Congela posición y anula velocidades. Si se apaga, el personaje cae.", Value=false, Callback=function(v) HoldMode = v; if not v then frozenCF = nil end end})
+PhysTab:Toggle({Title="Sync (no anchored)", Desc="Teo default. Al apagar, ancla el HRP", Value=true, Callback=function(v) SyncMode = v end})
+PhysTab:Toggle({Title="HOLD", Desc="Congela posición al llegar", Value=false, Callback=function(v) HoldMode = v; if not v then frozenCF = nil end end})
 PhysTab:Toggle({Title="WASD Move", Desc="Mueve la posición con WASD", Value=false, Callback=function(v) WASDMoveEnabled = v; if not v then moveOffset = Vector3.zero end end})
 PhysTab:Toggle({Title="Anti-Fling on Grab", Desc="Cap de velocidad al agarrar", Value=true, Callback=function(v) AntiFlingOnGrab = v end})
 PhysTab:Toggle({Title="Stab on Grab", Desc="Congela CFrame si estás soldado", Value=true, Callback=function(v) StabOnGrab = v; if not v then strafeGrabCF = nil end end})
@@ -452,4 +455,4 @@ DefenceTab:Button({Title="Inmortalidad", Callback=function()
 end})
 
 -- ===== NOTIFICACIÓN FINAL =====
-Window:Notify({Title = "FUSION CF 👑", Content = "V12 - Optimizado (Sin Spam, Reset Grab OK)", Duration = 6})
+Window:Notify({Title = "FUSION CF 👑", Content = "V13 - Todo restaurado y optimizado", Duration = 6})

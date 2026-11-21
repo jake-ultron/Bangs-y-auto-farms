@@ -1,4 +1,4 @@
---// FUSION 👑 x FAMILY CF — V11 (FINAL FIX)
+--// FUSION 👑 x FAMILY CF — V12 (OPTIMIZADO)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -12,7 +12,6 @@ if _G.Fusion_LastStart and (tick() - _G.Fusion_LastStart) < COOLDOWN then
 end
 _G.Fusion_LastStart = tick()
 
--- Limpieza profunda (Mata duplicados de extensiones)
 local function wipeGUI()
     local function check(gui)
         if gui:IsA("ScreenGui") then
@@ -55,9 +54,9 @@ local BangSpeed = 1; local BangShakeEnabled = false
 local OrbitSpeed = 2.0; local orbitAngle = 0
 local StrafeSpeed = 22; local PhysSpeed = 10
 local WASDMoveEnabled = false; local moveOffset = Vector3.zero
-local SyncMode = true; local HoldMode = false; local frozenCF = nil
+local HoldMode = false; local frozenCF = nil
 local AntiFlingOnGrab = true; local MaxGrabSpeed = 35; local GrabDamp = 0.15
-local StabOnGrab = true; local ResetOnGrab = false
+local StabOnGrab = true; local ResetOnGrab = false; local ResetGrabTime = 2.0
 local grabActive = false; local grabDampUntil = 0
 local strafeGrabCF = nil; local freeYaw = 0; local spinAcc = 0
 local AlwaysClosest = false; local PoseIdx = 1; local POSES = { {p=-90,r=0}, {p=90,r=0}, {p=0,r=0}, {p=-90,r=90} }
@@ -70,7 +69,7 @@ local mobileButton = nil; local mobileButtonDragEnabled = false
 local refrescandoLista = false; local mapaNombres = {}; local MobileSel = {Strafe=true}; local ToggleRefs = {}
 local Toggles = { Strafe=false, Headsit=false, Orbit=false, WalkingFling=false, AntiVoid=false, AntiBangV1=false, AntiBangV2=false, AntiFling=false, ViewTarget=false }
 _G.Fusion_Toggles = Toggles
-local isDead = false; local currentMode = nil -- Bloqueo de 3s al morir
+local isDead = false; local currentMode = nil
 
 -- ===== HELPERS =====
 local NOTIF_DELAY = 2.0; local lastNotif, pendingNotif = 0, nil
@@ -148,13 +147,13 @@ local function pickActiveTarget(targets)
     activeTarget = targets[1]; currentTargetIndex = 1; return activeTarget
 end
 
--- ===== STRAFE STATE (TEO REAL) =====
+-- ===== STRAFE STATE =====
 local strafeState = nil
 local function strafeEnable()
     local char = LP.Character; local hum = char and char:FindFirstChildOfClass("Humanoid"); local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp then return end
     freeYaw = math.rad(hrp.Orientation.Y); strafeState = { anchored = hrp.Anchored, platform = hum.PlatformStand, autorotate = hum.AutoRotate }
-    hum.PlatformStand = true; hum.AutoRotate = false; if not SyncMode then hrp.Anchored = true end
+    hum.PlatformStand = true; hum.AutoRotate = false
     pcall(function() for _, tr in ipairs(hum:GetPlayingAnimationTracks()) do tr:Stop() end end)
     moveOffset = Vector3.zero; frozenCF = nil; strafeGrabCF = nil
 end
@@ -164,8 +163,8 @@ local function strafeDisable()
     strafeState = nil; frozenCF = nil; strafeGrabCF = nil; moveOffset = Vector3.zero
 end
 
--- ===== LOOP MAESTRO =====
-_G.Fusion_MainLoop = RunService.Heartbeat:Connect(function(dt)
+-- ===== LOOP MAESTRO (RenderStepped para fluidez visual) =====
+_G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     if isDead then return end
     local char = LP.Character; if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid"); local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -176,8 +175,7 @@ _G.Fusion_MainLoop = RunService.Heartbeat:Connect(function(dt)
     if mode ~= currentMode then if mode then strafeEnable() else strafeDisable() end; currentMode = mode end
     if not mode then return end
     if not hum.PlatformStand then hum.PlatformStand = true; hum.AutoRotate = false end
-    if SyncMode and hrp.Anchored then hrp.Anchored = false end
-    if not SyncMode and not hrp.Anchored then hrp.Anchored = true end
+    
     if PhysYawMode == 3 then spinAcc = spinAcc + PhysSpin * dt end
     
     local targets = ObtenerObjetivosValidos(); if #targets == 0 then return end
@@ -187,22 +185,35 @@ _G.Fusion_MainLoop = RunService.Heartbeat:Connect(function(dt)
     if not firstHead or not firstHrp then return end
     
     local welded = weldedPlayer()
+    
     if welded and ResetOnGrab then
-        local savePos = hrp.Position; hum.Health = 0
-        task.spawn(function() LP.CharacterAdded:Wait(); task.wait(0.5); local newHrp = LP.Character:WaitForChild("HumanoidRootPart", 5); if newHrp then newHrp.CFrame = CFrame.new(savePos) end end)
-        Notificar("AUTO GRAB", "Fuiste agarrado. Reseteando...", 3); ResetOnGrab = false; if ToggleRefs.ResetGrab then pcall(function() ToggleRefs.ResetGrab:Set(false, true) end) end; return
+        local savePos = hrp.Position
+        isDead = true
+        hum.Health = 0
+        task.spawn(function()
+            LP.CharacterAdded:Wait()
+            task.wait(ResetGrabTime)
+            local newHrp = LP.Character:WaitForChild("HumanoidRootPart", 5)
+            if newHrp then newHrp.CFrame = CFrame.new(savePos) end
+            isDead = false
+            if Toggles.Strafe or Toggles.Headsit or Toggles.Orbit then Notificar("AUTO GRAB", "Regresando a posición...", 3) end
+        end)
+        return
     end
+    
     if AntiFlingOnGrab and welded then
         if not grabActive then grabActive = true; grabDampUntil = os.clock() + GrabDamp end
         if os.clock() < grabDampUntil then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero
         else local v = hrp.AssemblyLinearVelocity; if v.Magnitude > MaxGrabSpeed then hrp.AssemblyLinearVelocity = v.Unit * MaxGrabSpeed end; hrp.AssemblyAngularVelocity = Vector3.zero end
     else grabActive = false end
+    
     if mode == "strafe" and welded and StabOnGrab then
         if not strafeGrabCF then strafeGrabCF = hrp.CFrame end
         if WASDMoveEnabled then local dir = wasdDir(); if dir.Magnitude > 0.01 then strafeGrabCF = CFrame.new(strafeGrabCF.Position + dir.Unit * StrafeSpeed * dt) * strafeGrabCF.Rotation end end
-        hrp.CFrame = strafeGrabCF; if SyncMode then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; hum.MoveDirection = Vector3.zero end; return
+        hrp.CFrame = strafeGrabCF; if HoldMode then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; hum.MoveDirection = Vector3.zero end; return
     end
     strafeGrabCF = nil
+    
     if WASDMoveEnabled then local dir = wasdDir(); if dir.Magnitude > 0.01 then moveOffset += dir.Unit * StrafeSpeed * dt end end
     
     local cf
@@ -225,10 +236,10 @@ _G.Fusion_MainLoop = RunService.Heartbeat:Connect(function(dt)
     end
     
     if cf then
-        -- VELOCIDAD DE PEGADO UNIVERSAL (Strafe, Headsit, Orbit)
+        -- Ajuste de fluidez visual
         if PhysSpeed >= 10 then hrp.CFrame = cf + moveOffset
         else hrp.CFrame = hrp.CFrame:Lerp(cf + moveOffset, math.clamp(PhysSpeed * dt, 0, 1)) end
-        if SyncMode then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; hum.MoveDirection = Vector3.zero end
+        if HoldMode then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; hum.MoveDirection = Vector3.zero end
     end
 end)
 
@@ -240,7 +251,7 @@ local CheckTab   = Window:Tab({Title="CHECKPOINT", Icon="map-pin"})
 local MobileTab  = Window:Tab({Title="MOBILE", Icon="smartphone"})
 local DefenceTab = Window:Tab({Title="DEFENCE", Icon="shield"})
 
--- ===== 1. TARGET Y ATAQUES (Estética V8) =====
+-- ===== 1. TARGET Y ATAQUES =====
 local DropdownTargets = AttackTab:Dropdown({
     Title = "Fijar Objetivos (Multi)", Desc = "Selecciona jugadores. El filtro es opcional.", Values = ObtenerJugadores(), Value = nil, AllowNone = true, Multi = true,
     Callback = function(val)
@@ -283,14 +294,14 @@ AttackTab:Toggle({Title="WALKING FLING", Value=false, Callback=function(value) T
             for _, v in pairs(lp.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end; RunService.RenderStepped:Wait(); hrp.Velocity = oldV end end) end); _G.Fusion_WalkingFling = WalkingFlingConnection; Notificar("Walking Fling", "Activado.", 3)
     else if WalkingFlingConnection then WalkingFlingConnection:Disconnect(); WalkingFlingConnection = nil; _G.Fusion_WalkingFling = nil end end end})
 
--- ===== 2. CONTROL X/Y/Z (Estética V8) =====
+-- ===== 2. CONTROL X/Y/Z =====
 ControlTab:Input({ Title = "X (lateral)", Desc = "Desplazamiento lateral. Default: 0", Placeholder = "0", Callback = function(v) OffsetX = tonumber(v) or 0; if v == "" then Notificar("Reset X", "Default: 0", 3) end end })
 ControlTab:Input({ Title = "Y (altura)", Desc = "Altura respecto al objetivo. Default: 0", Placeholder = "0", Callback = function(v) OffsetY = tonumber(v) or 0; if v == "" then Notificar("Reset Y", "Default: 0", 3) end end })
 ControlTab:Input({ Title = "Z (distancia / radio de órbita)", Desc = "En Bang = distancia frontal. En Orbit = radio (mín 3). Default: 1.1", Placeholder = "1.1", Callback = function(v) OffsetZ = tonumber(v) or 1.1; if v == "" then Notificar("Reset Z", "Default: 1.1", 3) end end })
 ControlTab:Input({ Title = "Velocidad de rotación", Desc = "Solo para Orbit. Default: 2", Placeholder = "2", Callback = function(v) local n = tonumber(v); if n then OrbitSpeed = n elseif not v or v:match("^%s*$") then OrbitSpeed = 2.0; Notificar("Reset Speed", "Default: 2", 3) end end })
 
--- ===== 3. EDICIÓN FÍSICA (Fusión Total) =====
-PhysTab:Input({Title="Speed (Pegado Universal)", Desc="Velocidad para pegarse (Strafe, Headsit, Orbit). 10 = Instantáneo. Default: 10", Placeholder="10", Callback=function(v) local n = tonumber(v); if n and n > 0 then PhysSpeed = n elseif v == "" then PhysSpeed = 10; Notificar("Reset Pegado", "Default: 10", 3) end end})
+-- ===== 3. EDICIÓN FÍSICA =====
+PhysTab:Input({Title="Speed (Pegado Universal)", Desc="Velocidad para pegarse. 10 = Instantáneo. Default: 10", Placeholder="10", Callback=function(v) local n = tonumber(v); if n and n > 0 then PhysSpeed = n elseif v == "" then PhysSpeed = 10; Notificar("Reset Pegado", "Default: 10", 3) end end})
 PhysTab:Input({Title="Pitch (Inclinación)", Desc="Default: -90", Placeholder="-90", Callback=function(v) PhysPitch = tonumber(v) or -90; if v == "" then Notificar("Reset Pitch", "Default: -90", 3) end end})
 PhysTab:Input({Title="Roll (Ladeo)", Desc="Default: 0", Placeholder="0", Callback=function(v) PhysRoll = tonumber(v) or 0; if v == "" then Notificar("Reset Roll", "Default: 0", 3) end end})
 PhysTab:Input({Title="Spin Speed", Desc="Solo si Yaw=SPIN. Default: 60", Placeholder="60", Callback=function(v) PhysSpin = tonumber(v) or 60; if v == "" then Notificar("Reset Spin", "Default: 60", 3) end end})
@@ -298,12 +309,13 @@ PhysTab:Input({Title="Strafe Speed (WASD)", Desc="Velocidad de desplazamiento. D
 PhysTab:Input({Title="Max Grab Speed", Desc="Tope de velocidad al agarrar. Default: 35", Placeholder="35", Callback=function(v) MaxGrabSpeed = tonumber(v) or 35; if v == "" then Notificar("Reset MaxGrab", "Default: 35", 3) end end})
 PhysTab:Input({Title="Grab Damp", Desc="Segundos de freeze inicial. Default: 0.15", Placeholder="0.15", Callback=function(v) GrabDamp = tonumber(v) or 0.15; if v == "" then Notificar("Reset Damp", "Default: 0.15", 3) end end})
 PhysTab:Input({Title="SPEED (Shake)", Desc="Velocidad de vibración. Default: 1", Placeholder="1", Callback=function(v) BangSpeed = tonumber(v) or 1; if v == "" then Notificar("Reset Shake", "Default: 1", 3) end end})
+PhysTab:Input({Title="Reset Grab Time", Desc="Segundos de espera antes de volver al ser agarrado. Default: 2", Placeholder="2", Callback=function(v) ResetGrabTime = tonumber(v) or 2; if v == "" then Notificar("Reset Grab", "Default: 2s", 3) end end})
 
-PhysTab:Toggle({Title="Sync (no anchored)", Desc="Teo default. Al apagar, ancla el HRP", Value=true, Callback=function(v) SyncMode = v end})
-PhysTab:Toggle({Title="HOLD", Desc="Congela posición al llegar", Value=false, Callback=function(v) HoldMode = v; if not v then frozenCF = nil end end})
+PhysTab:Toggle({Title="HOLD / SYNC", Desc="Congela posición y anula velocidades. Si se apaga, el personaje cae.", Value=false, Callback=function(v) HoldMode = v; if not v then frozenCF = nil end end})
 PhysTab:Toggle({Title="WASD Move", Desc="Mueve la posición con WASD", Value=false, Callback=function(v) WASDMoveEnabled = v; if not v then moveOffset = Vector3.zero end end})
 PhysTab:Toggle({Title="Anti-Fling on Grab", Desc="Cap de velocidad al agarrar", Value=true, Callback=function(v) AntiFlingOnGrab = v end})
 PhysTab:Toggle({Title="Stab on Grab", Desc="Congela CFrame si estás soldado", Value=true, Callback=function(v) StabOnGrab = v; if not v then strafeGrabCF = nil end end})
+PhysTab:Toggle({Title="Reset on Grab", Desc="Al ser agarrado, resetea y vuelve a tu posición", Value=false, Callback=function(v) ResetOnGrab = v end})
 PhysTab:Toggle({Title="Siempre más cercano", Desc="Ignora rotación de targets, busca el más cercano", Value=false, Callback=function(v) AlwaysClosest = v end})
 PhysTab:Toggle({Title="Bang Shake (Animación)", Desc="Vibración al hacer Bang.", Value=false, Callback=function(v) BangShakeEnabled = v end})
 
@@ -311,18 +323,18 @@ PhysTab:Button({Title="Cambiar Yaw Mode", Desc="TARGET -> FREE -> SPIN", Callbac
 PhysTab:Button({Title="Flip Pitch", Desc="Invierte la inclinación", Callback=function() PhysPitch = -PhysPitch; Notificar("Pitch", tostring(PhysPitch), 3) end})
 PhysTab:Button({Title="Cambiar Pose", Desc="Prone, Face-up, Sit, Side", Callback=function() PoseIdx = PoseIdx % #POSES + 1; local p = POSES[PoseIdx]; PhysPitch = p.p; PhysRoll = p.r; Notificar("Pose", "Cambiada", 3) end})
 PhysTab:Button({Title="RESET FÍSICA", Color=Color3.fromRGB(180,40,40), Callback=function() 
-    OffsetX, OffsetY, OffsetZ = 0, 0, 1.1; PhysPitch, PhysRoll = -90, 0; OrbitSpeed = 2.0; BangSpeed = 1; StrafeSpeed = 22; PhysSpeed = 10; frozenCF = nil; moveOffset = Vector3.zero; strafeGrabCF = nil
+    OffsetX, OffsetY, OffsetZ = 0, 0, 1.1; PhysPitch, PhysRoll = -90, 0; OrbitSpeed = 2.0; BangSpeed = 1; StrafeSpeed = 22; PhysSpeed = 10; ResetGrabTime = 2; frozenCF = nil; moveOffset = Vector3.zero; strafeGrabCF = nil
     Notificar("RESET FÍSICA", "Valores restablecidos. Volviendo a pegar.", 3) 
 end})
 
--- ===== 4. CHECKPOINT (Estética V8 + Cooldown Muerte) =====
+-- ===== 4. CHECKPOINT =====
 local function forceReset() if LP.Character then local h = LP.Character:FindFirstChildOfClass("Humanoid"); if h then h.Health = 0; pcall(function() h:ChangeState(Enum.HumanoidStateType.Dead) end) end; pcall(function() LP.Character:BreakJoints() end) end end
 local function handleAutoReset() if not autoResetEnabled or autoResetInterval <= 0 then return end; local char = LP.Character; if char then local h = char:FindFirstChildOfClass("Humanoid"); if h and h.Health > 0 and tick() - lastResetTime >= autoResetInterval then forceReset(); lastResetTime = tick() end end end
 _G.Fusion_FarmLoop = RunService.Heartbeat:Connect(handleAutoReset)
 
 _G.Fusion_SpawnConn = LP.CharacterAdded:Connect(function(char)
     lastResetTime = tick(); isDead = true
-    task.wait(3) -- Cooldown 3s al morir para que el Hitbox del juego se estabilice
+    task.wait(3)
     isDead = false
     if SavedCheckpoint then local root = char:WaitForChild("HumanoidRootPart", 5); if root then root.CFrame = CFrame.new(SavedCheckpoint) end end
 end)
@@ -334,7 +346,7 @@ CheckTab:Button({Title="📍 Save Checkpoint",Desc = "esto modificar el punto de
 CheckTab:Button({Title="🗑️ Clear Checkpoint",Desc = "literal borra el punto de aparición o el punto que guardaste", Callback=function() SavedCheckpoint = nil; Notificar("Checkpoint", "Eliminado.", 3) end})
 CheckTab:Button({Title="⚠️🔵 Modo Auto Farm AFK 🔵⚠️",Desc = "⚠️ ADVERTENCIA ESTO SOLO ES PARA FARMEAR NO PIQUE ESTA FUNCION A MENOS QUE QUIERAS GANAR KILL CON TU CUENTA SECUNDARIA SOLO SIRVE PARA GANAR KILL EN RP 2 PLAYERS⚠️👻", Callback=function() Notificar("AFK", "Iniciando Auto Farm ATI...", 3); pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/wyMSZ29R"))() end) end})
 
--- ===== 5. MOBILE (Estética V8) =====
+-- ===== 5. MOBILE =====
 local MobileOpts = { {"STRAFE","Strafe","STRAFE"}, {"ORBIT","Orbit","ORBIT"}, {"HEADSIT","Headsit","HEAD"}, {"VIEW TARGET","ViewTarget","VIEW"} }
 local function mobileKeys() local k = {}; for _, o in ipairs(MobileOpts) do if MobileSel[o[2]] then table.insert(k, o) end end; return k end
 local function mobileAnyOn() for _, o in ipairs(mobileKeys()) do if Toggles[o[2]] then return true end end; return false end
@@ -366,9 +378,7 @@ MobileTab:Dropdown({Title="Lógicas del botón digital",Desc = "elige cuáles en
     for _, n in ipairs(list) do if type(n) == "table" then n = n.Title end; for _, o in ipairs(MobileOpts) do if o[1] == n then nueva[o[2]] = true end end end
     for k in pairs(MobileSel) do if not nueva[k] and Toggles[k] then setLogic(k, false) end end; MobileSel = nueva; refreshMobileButton() end})
 
--- ===== 6. DEFENCE (Estética V8) =====
-DefenceTab:Button({Title="CHOCO EDITION SPAM 👑",Desc = "esto solo sirven para hacer spam de chat más que nada para molestar ⚠️🐒", Callback=function() pcall(function() loadstring(game:HttpGet(("https://gist.githubusercontent.com/TOXIC-8535/3fb7f2ed806ebe14d31ec8fa87abdf6a/raw/2e5c81dda577d72b2b2b9e00b43477b784a742e0/Choco%2520edition%2520spammer"),true))() end) end})
-ToggleRefs.ResetGrab = DefenceTab:Toggle({Title="Reset on Grab", Desc="Al ser agarrado, resetea y vuelve a tu posición", Value=false, Callback=function(v) ResetOnGrab = v end})
+-- ===== 6. DEFENCE =====
 local SafeSpotGui, SafeSpotBaseplate, teleported, originalPosition = nil,nil,false,nil
 local function destroySafeSpot() if teleported and originalPosition and LP.Character then local hrp = LP.Character:FindFirstChild("HumanoidRootPart"); if hrp then hrp.CFrame = CFrame.new(originalPosition) end end; teleported = false; if SafeSpotGui then SafeSpotGui:Destroy(); SafeSpotGui = nil end; if SafeSpotBaseplate then SafeSpotBaseplate:Destroy(); SafeSpotBaseplate = nil end end
 _G.Fusion_SafeSpotCleanup = destroySafeSpot
@@ -442,4 +452,4 @@ DefenceTab:Button({Title="Inmortalidad", Callback=function()
 end})
 
 -- ===== NOTIFICACIÓN FINAL =====
-Window:Notify({Title = "FUSION CF 👑", Content = "V11 - Unificación + Reset Físico", Duration = 6})
+Window:Notify({Title = "FUSION CF 👑", Content = "V12 - Optimizado (Sin Spam, Reset Grab OK)", Duration = 6})

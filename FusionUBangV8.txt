@@ -1,4 +1,4 @@
---// FUSION 👑 x FAMILY CF — V13 (FINAL)
+--// FUSION 👑 x FAMILY CF — V13 (FINAL OPTIMIZADO)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -163,7 +163,7 @@ local function strafeDisable()
     strafeState = nil; frozenCF = nil; strafeGrabCF = nil; moveOffset = Vector3.zero
 end
 
--- ===== LOOP MAESTRO (RenderStepped) =====
+-- ===== LOOP MAESTRO (RenderStepped para fluidez) =====
 _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     if isDead then return end
     local char = LP.Character; if not char then return end
@@ -455,4 +455,4 @@ DefenceTab:Button({Title="Inmortalidad", Callback=function()
 end})
 
 -- ===== NOTIFICACIÓN FINAL =====
-Window:Notify({Title = "FUSION CF 👑", Content = "V13 - Todo restaurado y optimizado", Duration = 6})
+Window:Notify({Title = "FUSION CF 👑", Content = "V13 - Análisis completado. Mejor versión.", Duration = 6})

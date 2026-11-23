@@ -381,7 +381,9 @@ PhysTab:Toggle({Title="Bang Shake (Animación)", Desc="Vibración al hacer Bang.
 PhysTab:Button({Title="Cambiar Yaw Mode", Desc="TARGET -> FREE -> SPIN", Callback=function() PhysYawMode = PhysYawMode % 3 + 1; Notificar("Yaw Mode", "Modo: "..PhysYawMode, 3) end})
 PhysTab:Button({Title="Flip Pitch", Desc="Invierte la inclinación", Callback=function() PhysPitch = -PhysPitch; Notificar("Pitch", tostring(PhysPitch), 3) end})
 PhysTab:Button({Title="Cambiar Pose", Desc="Prone, Face-up, Sit, Side", Callback=function() PoseIdx = PoseIdx % #POSES + 1; local p = POSES[PoseIdx]; PhysPitch = p.p; PhysRoll = p.r; Notificar("Pose", "Cambiada", 3) end})
-PhysTab:Button({Title="RESET FÍSICA", Color=Color3.fromRGB(180,40,40), Callback=function() 
+PhysTab:Button({Title="RESET FÍSICA", 
+Desc = "Esto reinciar solo la lógica del posición no hace reset solo reinicia la orientación a su estado original",
+Color=Color3.fromRGB(180,40,40), Callback=function() 
     OffsetX, OffsetY, OffsetZ = 0, 0, 1.1; PhysPitch, PhysRoll = -90, 0; OrbitSpeed = 2.0; BangSpeed = 1; StrafeSpeed = 22; PhysSpeed = 10; GrabDelay = 3.0; ResetGrabTime = 2.0; frozenCF = nil; moveOffset = Vector3.zero; strafeGrabCF = nil
     Notificar("RESET FÍSICA", "Valores restablecidos. Volviendo a pegar.", 3) 
 end})
@@ -400,7 +402,7 @@ end)
 
 CheckTab:Toggle({Title="Activar Auto Reset",Desc = "esta palanca(o toggle) hace que te mueras o suicido automáticamente",Value=false, Callback=function(s) autoResetEnabled = s; if s then lastResetTime = tick() end end})
 CheckTab:Input({Title="Tiempo Auto Reset",Desc = "con esto controlas el tiemporizador que el auto reset va ejecutar tu muerte",Placeholder="30", Callback=function(t) local n=tonumber(t); if n and n>0 then autoResetInterval=n elseif not t or t:match("^%s*$") then autoResetInterval=30; Notificar("Reset Time", "Default: 30", 3) end end})
-CheckTab:Button({Title="💀 Forzar Reset Ahora", Callback=function() forceReset() end})
+CheckTab:Button({Title="💀 Forzar Reset Ahora",Desc = "ESTO SIRVE PARA SUICIDIO okey ño pero si sirve para reinciar UwU ☝️",Color=Color3.fromRGB(180,40,40),Callback=function() forceReset() end})
 CheckTab:Button({Title="📍 Save Checkpoint",Desc = "esto modificar el punto de aparición como si fuera tu camita de Minecraft lo guarda y cuando mueres apareces en dónde asignaste", Callback=function() local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart"); if r then SavedCheckpoint = r.Position; Notificar("Checkpoint", "Guardado.", 3) end end})
 CheckTab:Button({Title="🗑️ Clear Checkpoint",Desc = "literal borra el punto de aparición o el punto que guardaste", Callback=function() SavedCheckpoint = nil; Notificar("Checkpoint", "Eliminado.", 3) end})
 CheckTab:Button({Title="⚠️🔵 Modo Auto Farm AFK 🔵⚠️",Desc = "⚠️ ADVERTENCIA ESTO SOLO ES PARA FARMEAR NO PIQUE ESTA FUNCION A MENOS QUE QUIERAS GANAR KILL CON TU CUENTA SECUNDARIA SOLO SIRVE PARA GANAR KILL EN RP 2 PLAYERS⚠️👻", Callback=function() Notificar("AFK", "Iniciando Auto Farm ATI...", 3); pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/wyMSZ29R"))() end) end})
@@ -487,7 +489,9 @@ DefenceTab:Toggle({Title="Anti Fling",Desc = "te defiende del fling impide que s
         _G.Fusion_AntiFling = AntiFlingConnection
     else if AntiFlingConnection then AntiFlingConnection:Disconnect(); AntiFlingConnection = nil; _G.Fusion_AntiFling = nil end end end})
 local inmortalBusy = false
-DefenceTab:Button({Title="Inmortalidad", Callback=function()
+DefenceTab:Button({Title="Inmortalidad",
+Desc = "inmortal GLICH ⚠️ ADVERTENCIA ⚠️ solo funciona en 2RP DESCONOZCO si es funcional pa otros juegos ojo esto funciona como probabilidad como ruleta rusa ay probabilidad de que no te salga ala primera ⚠️ no debes tener Anti ragdoll ni scape ragdoll activo ⚠️ninguna conexión con TP o otra cosa que te aga teletransporte",
+Callback=function()
     if inmortalBusy then return end; inmortalBusy = true
     local RS = game:GetService("ReplicatedStorage"); local LocalPlayer = Players.LocalPlayer; local VOID_Y = -300; local DURACION = 9
     task.spawn(function() local inicio = os.clock()

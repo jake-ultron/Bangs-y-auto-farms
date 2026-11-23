@@ -1,4 +1,4 @@
---// FUSION 👑 x FAMILY CF — V14 (MEJORAS APLICADAS)
+--// FUSION 👑 x FAMILY CF — V15 (RESET GRAB EXACTO)
 local HUB_NAME = "FUSION X CF"
 local HUB_ID   = "FusionCF"
 local START_K  = HUB_ID .. "_LastStart"
@@ -72,7 +72,8 @@ local StrafeSpeed = 22; local PhysSpeed = 10
 local WASDMoveEnabled = false; local moveOffset = Vector3.zero
 local SyncMode = true; local HoldMode = false; local frozenCF = nil
 local AntiFlingOnGrab = true; local MaxGrabSpeed = 35; local GrabDamp = 0.15
-local StabOnGrab = true; local ResetOnGrab = false; local ResetGrabTime = 2.0
+local StabOnGrab = true; local ResetOnGrab = false 
+local GrabDelay = 3.0; local ResetGrabTime = 2.0
 local grabActive = false; local grabDampUntil = 0
 local strafeGrabCF = nil; local freeYaw = 0; local spinAcc = 0
 local AlwaysClosest = false; local PoseIdx = 1; local POSES = { {p=-90,r=0}, {p=90,r=0}, {p=0,r=0}, {p=-90,r=90} }
@@ -85,7 +86,7 @@ local mobileButton = nil; local mobileButtonDragEnabled = false
 local refrescandoLista = false; local _refT = 0; local mapaNombres = {}; local MobileSel = {Strafe=true}; local ToggleRefs = {}
 local Toggles = { Strafe=false, Headsit=false, Orbit=false, WalkingFling=false, AntiVoid=false, AntiBangV1=false, AntiBangV2=false, AntiFling=false, ViewTarget=false }
 _G.Fusion_Toggles = Toggles
-local isDead = false; local currentMode = nil
+local isDead = false; local currentMode = nil; local isWaitingGrab = false
 
 -- ===== HELPERS =====
 local NOTIF_DELAY = 2.0; local lastNotif, pendingNotif = 0, nil
@@ -202,17 +203,34 @@ _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     
     local welded = weldedPlayer()
     
-    if welded and ResetOnGrab and not isDead then
+    -- DETECCIÓN DE GRAB Y RESET CON DELAY
+    if welded and ResetOnGrab and not isDead and not isWaitingGrab then
+        isWaitingGrab = true
         local savePos = hrp.Position
-        isDead = true
-        hum.Health = 0
+        
         task.spawn(function()
+            task.wait(GrabDelay) -- Espera el "Grab Delay" (ej. 3s)
+            
+            -- Si desactivaron el toggle o el personaje murió solo, abortar
+            if not ResetOnGrab or not LP.Character then 
+                isWaitingGrab = false 
+                return 
+            end
+            
+            -- Aplicar Reset
+            isDead = true
+            local h = LP.Character:FindFirstChildOfClass("Humanoid")
+            if h then h.Health = 0 end
+            
             LP.CharacterAdded:Wait()
-            task.wait(ResetGrabTime)
+            task.wait(ResetGrabTime) -- Espera el "Reset Grab Time" (ej. 2s)
+            
             local newHrp = LP.Character:WaitForChild("HumanoidRootPart", 5)
             if newHrp then newHrp.CFrame = CFrame.new(savePos) end
-            task.wait(0.5) -- Pequeño delay para evitar bucle si te agarran al instante
+            
+            task.wait(0.5) -- Pequeño margen de seguridad
             isDead = false
+            isWaitingGrab = false
             if Toggles.Strafe or Toggles.Headsit or Toggles.Orbit then Notificar("AUTO GRAB", "Regresando a posición...", 3) end
         end)
         return
@@ -348,7 +366,8 @@ PhysTab:Input({Title="Strafe Speed (WASD)", Desc="Velocidad de desplazamiento. D
 PhysTab:Input({Title="Max Grab Speed", Desc="Tope de velocidad al agarrar. Default: 35", Placeholder="35", Callback=function(v) MaxGrabSpeed = tonumber(v) or 35; if v == "" then Notificar("Reset MaxGrab", "Default: 35", 3) end end})
 PhysTab:Input({Title="Grab Damp", Desc="Segundos de freeze inicial. Default: 0.15", Placeholder="0.15", Callback=function(v) GrabDamp = tonumber(v) or 0.15; if v == "" then Notificar("Reset Damp", "Default: 0.15", 3) end end})
 PhysTab:Input({Title="SPEED (Shake)", Desc="Velocidad de vibración. Default: 1", Placeholder="1", Callback=function(v) BangSpeed = tonumber(v) or 1; if v == "" then Notificar("Reset Shake", "Default: 1", 3) end end})
-PhysTab:Input({Title="Reset Grab Time", Desc="Segundos de espera antes de volver al ser agarrado. Default: 2", Placeholder="2", Callback=function(v) ResetGrabTime = tonumber(v) or 2; if v == "" then Notificar("Reset Grab", "Default: 2s", 3) end end})
+PhysTab:Input({Title="Grab Delay (Anti-Bug)", Desc="Espera antes de resetear al ser agarrado. Default: 3", Placeholder="3", Callback=function(v) GrabDelay = tonumber(v) or 3; if v == "" then Notificar("Grab Delay", "Default: 3s", 3) end end})
+PhysTab:Input({Title="Reset Grab Time", Desc="Segundos de espera al reaparecer antes de volver. Default: 2", Placeholder="2", Callback=function(v) ResetGrabTime = tonumber(v) or 2; if v == "" then Notificar("Reset Grab", "Default: 2s", 3) end end})
 
 PhysTab:Toggle({Title="Sync (no anchored)", Desc="Teo default. Al apagar, ancla el HRP", Value=true, Callback=function(v) SyncMode = v end})
 PhysTab:Toggle({Title="HOLD", Desc="Congela posición al llegar", Value=false, Callback=function(v) HoldMode = v; if not v then frozenCF = nil end end})
@@ -363,7 +382,7 @@ PhysTab:Button({Title="Cambiar Yaw Mode", Desc="TARGET -> FREE -> SPIN", Callbac
 PhysTab:Button({Title="Flip Pitch", Desc="Invierte la inclinación", Callback=function() PhysPitch = -PhysPitch; Notificar("Pitch", tostring(PhysPitch), 3) end})
 PhysTab:Button({Title="Cambiar Pose", Desc="Prone, Face-up, Sit, Side", Callback=function() PoseIdx = PoseIdx % #POSES + 1; local p = POSES[PoseIdx]; PhysPitch = p.p; PhysRoll = p.r; Notificar("Pose", "Cambiada", 3) end})
 PhysTab:Button({Title="RESET FÍSICA", Color=Color3.fromRGB(180,40,40), Callback=function() 
-    OffsetX, OffsetY, OffsetZ = 0, 0, 1.1; PhysPitch, PhysRoll = -90, 0; OrbitSpeed = 2.0; BangSpeed = 1; StrafeSpeed = 22; PhysSpeed = 10; ResetGrabTime = 2; frozenCF = nil; moveOffset = Vector3.zero; strafeGrabCF = nil
+    OffsetX, OffsetY, OffsetZ = 0, 0, 1.1; PhysPitch, PhysRoll = -90, 0; OrbitSpeed = 2.0; BangSpeed = 1; StrafeSpeed = 22; PhysSpeed = 10; GrabDelay = 3.0; ResetGrabTime = 2.0; frozenCF = nil; moveOffset = Vector3.zero; strafeGrabCF = nil
     Notificar("RESET FÍSICA", "Valores restablecidos. Volviendo a pegar.", 3) 
 end})
 
@@ -492,4 +511,4 @@ DefenceTab:Button({Title="Inmortalidad", Callback=function()
 end})
 
 -- ===== NOTIFICACIÓN FINAL =====
-Window:Notify({Title = HUB_NAME .. " 👑", Content = "V14 - AntiDupe y ResetGrab Optimizados", Duration = 6})
+Window:Notify({Title = HUB_NAME .. " 👑", Content = "V15 - Reset Grab (Delay 3s) Listo", Duration = 6})

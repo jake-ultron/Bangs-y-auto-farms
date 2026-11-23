@@ -1,31 +1,47 @@
---// FUSION 👑 x FAMILY CF — V13 (FINAL OPTIMIZADO)
+--// FUSION 👑 x FAMILY CF — V14 (MEJORAS APLICADAS)
+local HUB_NAME = "FUSION X CF"
+local HUB_ID   = "FusionCF"
+local START_K  = HUB_ID .. "_LastStart"
+local GUI_K    = HUB_ID .. "_CurrentGui"
+local COOLDOWN = 2.0
+if _G[START_K] and (tick() - _G[START_K]) < COOLDOWN then return end
+_G[START_K] = tick()
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local LP = Players.LocalPlayer
+local _pgui = LP:WaitForChild("PlayerGui")
 
 -- ===== ANTI-DUPLICADOS Y ANTI-SPAM =====
-local COOLDOWN = 2.0
-if _G.Fusion_LastStart and (tick() - _G.Fusion_LastStart) < COOLDOWN then
-    warn(string.format("[FUSION] Cooldown activo — espera %.1fs.", COOLDOWN - (tick() - _G.Fusion_LastStart))); return
+local function getAllContainers()
+    local c = { CoreGui, _pgui }
+    if typeof(gethui) == "function" then pcall(function() table.insert(c, gethui()) end) end
+    return c
 end
-_G.Fusion_LastStart = tick()
 
-local function wipeGUI()
-    local function check(gui)
-        if gui:IsA("ScreenGui") then
-            if gui.Name == "FusionCF" or gui.Name == "WindUI" then gui:Destroy(); return end
-            for _, v in ipairs(gui:GetDescendants()) do
-                if v:IsA("TextLabel") and (v.Text == "FUSION X CF" or v.Text == "TOXIC X FUSION") then gui:Destroy(); break end
-            end
+local function isThisHubScreen(gui)
+    if not gui or not gui:IsA("ScreenGui") then return false end
+    if gui.Name == "FusionMobileButton" or gui.Name == HUB_ID then return true end
+    for _, d in ipairs(gui:GetDescendants()) do
+        if d:IsA("TextLabel") and (d.Text == HUB_NAME or d.Text == "TOXIC X FUSION") then return true end
+    end
+    return false
+end
+
+local function destroyOldWindows(exceptGui)
+    for _, container in ipairs(getAllContainers()) do
+        if container then
+            pcall(function()
+                for _, gui in ipairs(container:GetChildren()) do
+                    if gui ~= exceptGui and isThisHubScreen(gui) then gui:Destroy() end
+                end
+            end)
         end
     end
-    pcall(function() for _, v in ipairs(CoreGui:GetChildren()) do check(v) end end)
-    pcall(function() local pg = LP:FindFirstChild("PlayerGui"); if pg then for _, v in ipairs(pg:GetChildren()) do check(v) end end end)
-    pcall(function() if typeof(gethui) == "function" then for _, v in ipairs(gethui():GetChildren()) do check(v) end end end)
 end
-wipeGUI()
+destroyOldWindows()
 
 local function FullDestruction()
     for _, key in ipairs({"Fusion_FarmLoop","Fusion_SpawnConn","Fusion_WalkingFling","Fusion_AntiFling","Fusion_MainLoop"}) do
@@ -41,7 +57,7 @@ FullDestruction()
 -- ===== WINDUI =====
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 local Window = WindUI:CreateWindow({
-    Title = "FUSION X CF", Icon = "crown", Author = "CF Hub", Folder = "FusionCF",
+    Title = HUB_NAME, Icon = "crown", Author = "CF Hub", Folder = HUB_ID,
     Size = UDim2.fromOffset(580, 460), Transparent = true, Theme = "Amber", Resizable = true,
     SideBarWidth = 180, ScrollBarEnabled = true,
     OpenButton = { Title = "Ultra bang", CornerRadius = UDim.new(2, 9), StrokeThickness = 2, Enabled = true, Draggable = true, Scale = 0.8, Position = UDim2.new(0.5,126,0,20), Color = ColorSequence.new(Color3.fromRGB(0,150,255), Color3.fromRGB(0,0,0)) }
@@ -60,13 +76,13 @@ local StabOnGrab = true; local ResetOnGrab = false; local ResetGrabTime = 2.0
 local grabActive = false; local grabDampUntil = 0
 local strafeGrabCF = nil; local freeYaw = 0; local spinAcc = 0
 local AlwaysClosest = false; local PoseIdx = 1; local POSES = { {p=-90,r=0}, {p=90,r=0}, {p=0,r=0}, {p=-90,r=90} }
-local TargetNames = {}; local PTg = {}; local ExcludeNames = {}
+local targetSet = {}; local PTg = {}
 local TargetSwitchInterval = 9; local lastSwitchTime = 1
 local currentTargetIndex = 1; local activeTarget = nil
 local WalkingFlingConnection = nil; local AntiFlingConnection = nil
 local SavedCheckpoint = nil; local autoResetEnabled = false; local autoResetInterval = 30; local lastResetTime = tick()
 local mobileButton = nil; local mobileButtonDragEnabled = false
-local refrescandoLista = false; local mapaNombres = {}; local MobileSel = {Strafe=true}; local ToggleRefs = {}
+local refrescandoLista = false; local _refT = 0; local mapaNombres = {}; local MobileSel = {Strafe=true}; local ToggleRefs = {}
 local Toggles = { Strafe=false, Headsit=false, Orbit=false, WalkingFling=false, AntiVoid=false, AntiBangV1=false, AntiBangV2=false, AntiFling=false, ViewTarget=false }
 _G.Fusion_Toggles = Toggles
 local isDead = false; local currentMode = nil
@@ -80,19 +96,18 @@ local function Notificar(t, m, d)
     if espera <= 0 then mostrarNotif(t, m, d); return end
     pendingNotif = {t, m, d}; task.delay(espera, function() local p = pendingNotif; pendingNotif = nil; if p then mostrarNotif(p[1], p[2], p[3]) end end)
 end
-local function ObtenerJugadores()
-    local lista = {}; mapaNombres = {}
-    for _, p in pairs(Players:GetPlayers()) do if p ~= LP then local fmt = p.Name .. "| " .. p.DisplayName; table.insert(lista, fmt); mapaNombres[fmt] = p.Name end end
-    return lista
+local function listaJugadores()
+    local n = {}
+    for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then table.insert(n, p.Name .. "| " .. p.DisplayName) end end
+    table.sort(n)
+    return n
 end
-local function ExtraerNombresReales(val)
-    local nombres = {}
-    if type(val) == "table" then for _, v in ipairs(val) do table.insert(nombres, mapaNombres[v] or v) end
-    elseif type(val) == "string" then table.insert(nombres, mapaNombres[val] or val) end
-    return nombres
+local function listaObjetivos()
+    local t = {}
+    for k in pairs(targetSet) do local p = Players:FindFirstChild(k); if p then table.insert(t, p.Name .. "| " .. p.DisplayName) end end
+    return t
 end
 local function matchFilter(p)
-    for _, n in ipairs(ExcludeNames) do if p.Name:lower() == n:lower() then return false end end
     if #PTg == 0 then return true end
     local n, d = p.Name:lower(), p.DisplayName:lower()
     for _, t in ipairs(PTg) do if n:find(t,1,true) or d:find(t,1,true) then return true end end
@@ -101,7 +116,7 @@ end
 local function ObtenerObjetivosValidos()
     local validos = {}
     local function push(p) if p and p ~= LP and matchFilter(p) and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then table.insert(validos, p) end end
-    if #TargetNames > 0 then for _, name in ipairs(TargetNames) do push(Players:FindFirstChild(name)) end
+    if next(targetSet) then for name in pairs(targetSet) do push(Players:FindFirstChild(name)) end
     else for _, p in ipairs(Players:GetPlayers()) do push(p) end end
     return validos
 end
@@ -163,7 +178,7 @@ local function strafeDisable()
     strafeState = nil; frozenCF = nil; strafeGrabCF = nil; moveOffset = Vector3.zero
 end
 
--- ===== LOOP MAESTRO (RenderStepped para fluidez) =====
+-- ===== LOOP MAESTRO =====
 _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     if isDead then return end
     local char = LP.Character; if not char then return end
@@ -187,7 +202,7 @@ _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
     
     local welded = weldedPlayer()
     
-    if welded and ResetOnGrab then
+    if welded and ResetOnGrab and not isDead then
         local savePos = hrp.Position
         isDead = true
         hum.Health = 0
@@ -196,6 +211,7 @@ _G.Fusion_MainLoop = RunService.RenderStepped:Connect(function(dt)
             task.wait(ResetGrabTime)
             local newHrp = LP.Character:WaitForChild("HumanoidRootPart", 5)
             if newHrp then newHrp.CFrame = CFrame.new(savePos) end
+            task.wait(0.5) -- Pequeño delay para evitar bucle si te agarran al instante
             isDead = false
             if Toggles.Strafe or Toggles.Headsit or Toggles.Orbit then Notificar("AUTO GRAB", "Regresando a posición...", 3) end
         end)
@@ -254,32 +270,53 @@ local MobileTab  = Window:Tab({Title="MOBILE", Icon="smartphone"})
 local DefenceTab = Window:Tab({Title="DEFENCE", Icon="shield"})
 
 -- ===== 1. TARGET Y ATAQUES =====
-local DropdownTargets = AttackTab:Dropdown({
-    Title = "Fijar Objetivos (Multi)", Desc = "Selecciona jugadores. El filtro es opcional.", Values = ObtenerJugadores(), Value = nil, AllowNone = true, Multi = true,
-    Callback = function(val)
-        if refrescandoLista then return end
-        if val == nil or (type(val) == "table" and #val == 0) then TargetNames = {} else TargetNames = ExtraerNombresReales(val) end
-        currentTargetIndex = 1; activeTarget = nil; lastSwitchTime = 0
-        if #TargetNames == 0 then Notificar("✅ Objetivos Limpios", "Sin objetivos.", 3)
-        else local n = table.concat(TargetNames, ", "); if #n > 50 then n = string.sub(n,1,50).."..." end; Notificar("🎯 Objetivos ("..#TargetNames..")", n, 3) end
-    end})
+local DropdownTargets
+local function refreshDD()
+    if not DropdownTargets then return end
+    refrescandoLista = true; _refT = tick()
+    pcall(function() DropdownTargets:Refresh(listaJugadores()) end)
+    local sel = listaObjetivos()
+    pcall(function() DropdownTargets:Select(#sel == 0 and nil or sel) end)
+    task.wait(0.1); refrescandoLista = false; _refT = tick()
+end
+
+DropdownTargets = AttackTab:Dropdown({
+    Title = "Fijar Objetivos (Multi)", Desc = "Selecciona jugadores. El filtro es opcional.", Values = listaJugadores(), Value = {}, Multi = true, AllowNone = true,
+    Callback = function(sel)
+        if refrescandoLista or tick() - _refT < 0.5 then return end
+        local old = targetSet; targetSet = {}
+        for k in pairs(old) do if not Players:FindFirstChild(k) then targetSet[k] = true end end
+        if type(sel) == "table" then
+            for _, v in pairs(sel) do
+                local n = type(v) == "table" and (v.Title or v.Name) or v
+                if type(n) == "string" then local realName = n:match("^(.-)%s*|") or n; targetSet[realName] = true end
+            end
+        elseif type(sel) == "string" then local realName = sel:match("^(.-)%s*|") or sel; targetSet[realName] = true end
+    end
+})
+
+Players.PlayerAdded:Connect(function() task.delay(0.2, refreshDD) end)
+Players.PlayerRemoving:Connect(function(plr) if targetSet[plr.Name] then targetSet[plr.Name] = nil end; task.delay(0.2, refreshDD) end)
+
 AttackTab:Input({ Title = "Filtro por nombre (opcional)", Desc = "Separa por espacios. Vacío = sin filtro.", Placeholder = "Ej: nat pro123",
     Callback = function(text) PTg = {}; if text and text:gsub("%s+","") ~= "" then for x in string.gmatch(text:lower(), "%S+") do table.insert(PTg, x) end end; currentTargetIndex = 1; activeTarget = nil; lastSwitchTime = 0 end })
-AttackTab:Input({ Title = "Excluir nombres (coma)", Desc = "Tu alt no se pega a ti mismo", Placeholder = "alt1, alt2",
-    Callback = function(text) ExcludeNames = {}; if text and text:gsub("%s+","") ~= "" then for x in string.gmatch(text:lower(), "[^,]+") do table.insert(ExcludeNames, (x:gsub("^%s+",""):gsub("%s+$",""))) end end end })
+
 AttackTab:Input({ Title = "Tiempo entre targets (multi)", Desc = "Segundos antes de cambiar. Default: 9", Placeholder = "9",
     Callback = function(t) local n = tonumber(t); if n and n > 0 then TargetSwitchInterval = n; lastSwitchTime = 1 elseif not t or t:match("^%s*$") then TargetSwitchInterval = 9.0; lastSwitchTime = 1; Notificar("Reset", "Tiempo por defecto: 9", 3) end end })
 
-local function SincronizarDropdown()
-    local sel = {}; for fmt, real in pairs(mapaNombres) do for _, t in ipairs(TargetNames) do if t == real then table.insert(sel, fmt); break end end end
-    pcall(function() DropdownTargets:Select(#sel > 0 and sel or nil) end)
-end
 AttackTab:Button({ Title = "🧹 Limpiar Selección", Color = Color3.fromRGB(180,40,40),
-    Callback = function() refrescandoLista = true; TargetNames = {}; activeTarget = nil; currentTargetIndex = 1; lastSwitchTime = 0; pcall(function() DropdownTargets:Select(nil) end); task.wait(0.05); pcall(function() DropdownTargets:Refresh(ObtenerJugadores()) end); task.wait(0.05); pcall(function() DropdownTargets:Select(nil) end); task.wait(0.1); refrescandoLista = false; Notificar("🧹 Reset", "Objetivos desmarcados.", 3) end })
-AttackTab:Button({ Title = "🔄 Actualizar Lista", Callback = function() refrescandoLista = true; local nv = ObtenerJugadores(); pcall(function() DropdownTargets:Refresh(nv) end); task.wait(0.1); SincronizarDropdown(); refrescandoLista = false; Notificar("🔄 Actualizado", "Jugadores: "..#nv, 3) end })
+    Callback = function()
+        refrescandoLista = true; _refT = tick()
+        targetSet = {}
+        pcall(function() DropdownTargets:SetValue(nil) end)
+        pcall(function() if DropdownTargets.Select then DropdownTargets:Select(nil) end end)
+        pcall(function() if DropdownTargets.Clear then DropdownTargets:Clear() end end)
+        task.wait(0.1)
+        refrescandoLista = false; _refT = tick()
+        Notificar("🧹 Reset", "Objetivos desmarcados.", 3)
+    end })
 
-local autoRefreshToken = {}; _G.Fusion_AutoRefresh = autoRefreshToken; local lastListKey = ""
-task.spawn(function() while _G.Fusion_AutoRefresh == autoRefreshToken do task.wait(36); local ks = {}; for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then table.insert(ks, p.Name.."|"..p.DisplayName) end end; table.sort(ks); local key = table.concat(ks, "\n"); if _G.Fusion_AutoRefresh == autoRefreshToken and key ~= lastListKey then lastListKey = key; refrescandoLista = true; pcall(function() DropdownTargets:Refresh(ObtenerJugadores()) end); task.wait(0.1); SincronizarDropdown(); refrescandoLista = false end end end)
+AttackTab:Button({ Title = "🔄 Actualizar Lista", Callback = function() refreshDD(); Notificar("🔄 Actualizado", "Lista actualizada", 3) end })
 
 AttackTab:Button({Title="GOTO TARGET", Desc="Ir al primer objetivo", Callback=function() local tg = ObtenerObjetivosValidos(); local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart"); if #tg > 0 and hrp and tg[1].Character then hrp.CFrame = tg[1].Character.HumanoidRootPart.CFrame end end})
 ToggleRefs.ViewTarget = AttackTab:Toggle({Title="VIEW TARGET", Value=false, Callback=function(v) Toggles.ViewTarget = v; local tg = ObtenerObjetivosValidos(); if v and #tg > 0 and tg[1].Character then local h = tg[1].Character:FindFirstChildOfClass("Humanoid"); if h then workspace.CurrentCamera.CameraSubject = h end else local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid"); if h then workspace.CurrentCamera.CameraSubject = h end end end})
@@ -357,7 +394,7 @@ local function refreshMobileButton() if not mobileButton then return end; local 
 local function setLogic(key, v) local ref = ToggleRefs[key]; local ok = ref and pcall(function() ref:Set(v, true) end); if not ok and (key == "Strafe" or key == "Orbit" or key == "Headsit") then Toggles[key] = v; lastSwitchTime = 0 end end
 local function createMobileButton()
     if _G.Fusion_MobileGui then return end
-    local gui = Instance.new("ScreenGui"); gui.Name = "FusionMobileButton"; gui.Parent = LP:WaitForChild("PlayerGui"); gui.ResetOnSpawn = false; gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; gui.DisplayOrder = 100; _G.Fusion_MobileGui = gui
+    local gui = Instance.new("ScreenGui"); gui.Name = "FusionMobileButton"; gui.Parent = _pgui; gui.ResetOnSpawn = false; gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; gui.DisplayOrder = 100; _G.Fusion_MobileGui = gui
     mobileButton = Instance.new("TextButton"); mobileButton.Size = UDim2.new(0,60,0,45); mobileButton.Position = UDim2.fromScale(0.66, 0.65); mobileButton.BackgroundColor3 = Color3.fromRGB(100,100,100); mobileButton.BackgroundTransparency = 0.4; mobileButton.Text = "BANG\nOFF"; mobileButton.TextColor3 = Color3.new(1,1,1); mobileButton.Font = Enum.Font.GothamBold; mobileButton.TextSize = 12; mobileButton.AutoButtonColor = false; mobileButton.Parent = gui
     local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0,8); c.Parent = mobileButton
     local pressPos
@@ -397,7 +434,7 @@ DefenceTab:Toggle({Title="Safe Spot",Desc = "genera una plataforma en sepa dónd
     if SafeSpotGui then return end
     local tp = Vector3.new(999,999,999)
     SafeSpotBaseplate = Instance.new("Part"); SafeSpotBaseplate.Size = Vector3.new(100,1,100); SafeSpotBaseplate.Position = tp - Vector3.new(0,5,0); SafeSpotBaseplate.Anchored = true; SafeSpotBaseplate.BrickColor = BrickColor.new("Earth green"); SafeSpotBaseplate.Parent = workspace
-    local pg = LP:WaitForChild("PlayerGui"); SafeSpotGui = Instance.new("ScreenGui"); SafeSpotGui.Name = "TeleportGui"; SafeSpotGui.ResetOnSpawn = false; SafeSpotGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; SafeSpotGui.DisplayOrder = 100; SafeSpotGui.Parent = pg
+    SafeSpotGui = Instance.new("ScreenGui"); SafeSpotGui.Name = "TeleportGui"; SafeSpotGui.ResetOnSpawn = false; SafeSpotGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; SafeSpotGui.DisplayOrder = 100; SafeSpotGui.Parent = _pgui
     local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0,60,0,45); btn.Position = UDim2.fromScale(0.66, 0.5); btn.BackgroundColor3 = Color3.fromRGB(100,100,100); btn.BackgroundTransparency = 0.4; btn.Text = "SAFE\nTP"; btn.TextColor3 = Color3.new(1,1,1); btn.Font = Enum.Font.GothamBold; btn.TextSize = 12; btn.AutoButtonColor = false; btn.Parent = SafeSpotGui
     local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0,8); c.Parent = btn
     local isDragged = makeDraggable(btn)
@@ -455,4 +492,4 @@ DefenceTab:Button({Title="Inmortalidad", Callback=function()
 end})
 
 -- ===== NOTIFICACIÓN FINAL =====
-Window:Notify({Title = "FUSION CF 👑", Content = "V13 - Análisis completado. Mejor versión.", Duration = 6})
+Window:Notify({Title = HUB_NAME .. " 👑", Content = "V14 - AntiDupe y ResetGrab Optimizados", Duration = 6})
